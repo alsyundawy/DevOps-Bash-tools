@@ -233,7 +233,7 @@ make
 - [Python](#python) - Python utilities & library management
 - [Perl](#perl) - Perl utilities & library management
 - [Golang](#golang) - Golang utilities
-- [Media](#media) - MP3 metadata editing, grouping and ordering of albums and audiobooks, mkv/avi to mp4 converters, 720p video downscaler, download YouTube videos or even entire channels
+- [Media](#media) - video downloaders & converts, MP3 metadata editing, grouping and ordering of albums and audiobooks, mkv/avi to mp4 converters, 720p video downscaler for posting to social media, download YouTube videos or even entire channels and videos from other social media sites like Twitter / X or Facebook, terminal gif capture
 - [Spotify](#spotify) - 40+ Spotify API scripts for backups, managing playlists, track deduplication, URI conversion, search, add/delete, liked tracks, followed artists, top artists, top tracks etc.
 - [More Linux & Mac](#more-linux--mac) - more systems administration scripts, package installation automation
 - [Builds, Languages & Linting](#builds-languages--linting) - programming language, build system & CI linting
@@ -348,9 +348,6 @@ Top-level `.bashrc` and `.bash.d/` directory:
 - `ssl_get_cert.sh` - gets a remote `host:port` server's SSL cert in a format you can pipe, save and use locally, for example in Java truststores
 - `ssl_verify_cert.sh` - verifies a remote SSL certificate (battle tested more feature-rich version `check_ssl_cert.pl` exists in the [Advanced Nagios Plugins](https://github.com/HariSekhon/Nagios-Plugins) repo)
 - `ssl_verify_cert_by_ip.sh` - verifies SSL certificates on specific IP addresses, useful to test SSL source addresses for CDNs, such as Cloudflare Proxied sources before enabling SSL Full-Strict Mode for end-to-end, or Kubernetes ingresses (see also `curl_k8s_ingress.sh`)
-- `ttygif.sh` - creates a Gif from running terminal commands using `ttyrec` and `ttygif` and then opens the resulting gif
-- `asciinema.sh` - creates a Gif from running terminal commands using `asciinema` and `agg` and then opens the resulting gif
-- `terminalizer.sh` - creates a Gif from running terminal commands using Terminalizer and then opens the resulting gif
 - `urlencode.sh` / `urldecode.sh` - URL encode/decode quickly on the command line, in pipes etc.
 - `urlextract.sh` - extracts the URLs from a given string arg, file or standard input
 - `url_extract_redirects.sh` - extracts the URLs from a given string arg, file or standard input, queries each one and outputs the redirected urls instead to stdout
@@ -437,7 +434,8 @@ Prometheus, OpenTSDB, InfluxDB etc.
 `aws/` directory:
 
 - [AWS](https://aws.amazon.com/) scripts - `aws_*.sh`:
-  - `aws_profile.sh` - switches to an AWS Profile given as an arg or prompts the user with a convenient interactive menu list of AWS profiles to choose from - useful when you have lots of AWS work profiles
+  - `aws_profile.sh` - switches to an AWS Profile selected from a convenient interactive menu list of AWS profiles from `$AWS_CONFIG_FILE` - useful when you have lots of AWS work profiles
+    - see also [HariSekhon/Environments](https://github.com/HariSekhon/Environments) for automated switching using direnv when `cd`ing into relevant directories
   - `aws_cli_create_credential.sh` - creates an AWS service account user for CI/CD or CLI with Admin permissions (or other group or policy), creates an AWS Access Key, saves a credentials CSV and even prints the shell export commands and aws credentials file config to configure your environment to start using it. Useful trick to avoid CLI reauth to `aws sso login` every day.
   - `aws_terraform_create_credential.sh` - creates a AWS terraform service account with Administrator permissions for Terraform Cloud or other CI/CD systems to run Terraform plan and apply, since no CI/CD systems can work with AWS SSO workflows. Stores the access key as both CSV and prints shell export commands and credentials file config as above
   - `.envrc-aws` - copy to `.envrc` for [direnv](https://direnv.net/) to auto-load AWS configuration settings such as AWS Profile, Compute Region, EKS cluster kubectl context etc.
@@ -462,19 +460,28 @@ Prometheus, OpenTSDB, InfluxDB etc.
   - `aws_config_recording.sh` - lists [AWS Config](https://aws.amazon.com/config/) recorders, their recording status (should be true) and their last status (should be success)
   - `aws_csv_creds.sh` - prints AWS credentials from a CSV file as shell export statements. Useful to quickly switch your shell to some exported credentials from a service account for testing permissions or pipe to upload to a CI/CD system via an API (eg. `jenkins_cred_add*.sh`, `github_actions_repo*_set_secret.sh`, `gitlab_*_set_env_vars.sh`, `circleci_*_set_env_vars.sh`, `bitbucket_*_set_env_vars.sh`, `terraform_cloud_*_set_vars.sh`, `kubectl_kv_to_secret.sh`). Supports new user and new access key csv file formats.
   - `aws_codecommit_csv_creds.sh` - prints AWS [CodeCommit](https://aws.amazon.com/codecommit/) Git credentials from a CSV file as shell export statements. Similar use case and chaining as above
-  - `aws_ec2_instance_name_to_id.sh` - looks up an EC2 instance ID from an instance name with extra safety checks that only a single instance ID is returned and a reverse lookup on that instance ID to re-verify it matches the name. If an instance ID is passed, returns it as is for convenience. Used by adjacent scripts
-  - `aws_ec2_instances.sh` - lists AWS EC2 instances, their DNS names and States in an easy to read table output
-  - `aws_ec2_terminate_instance_by_name.sh` - terminate an AWS EC2 instance by name
-  - `aws_ec2_create_ami_from_instance.sh` - creates an AWS EC2 AMI from an EC2 instance and waits for it to become available for use
-  - `aws_ec2_clone_instance.sh` - clones an AWS EC2 instance by creating an AMI from the original and then booting a new instance from the AMI with the same settings as the original instance. Useful to testing risky things on a separate EC2 instance, such as Server Administrator recovery of Tableau
-  - `aws_ec2_amis.sh` - list AWS EC2 AMIs belonging to your account in an easy to read table output
-  - `aws_ec2_ami_ids.sh` - lists AWS EC2 AMI IDs only, one per line, to be used in adjacent scripts that creating mapping tables and translate AMI IDs to names in inventory scripts `aws_info_ec2*.sh`
-  - `aws_ec2_ebs_*.sh` - AWS EC2 [EBS](https://aws.amazon.com/ebs/) scripts:
-    - `aws_ec2_ebs_volumes.sh` - list EC2 instances and their EBS volumes in the current region
-    - `aws_ec2_ebs_create_snapshot_and_wait.sh - creates a snapshot of a given EBS volume ID and waits for it to complete with exponential backoff
-    - `aws_ec2_ebs_resize_and_wait.sh - resizes an EBS volume and waits for it to complete modifying and optionally optimizing with exponential backoff
-    - `aws_ec2_ebs_volumes_unattached.sh` - list an unattached EBS volumes in a table format
-  - `aws_ec2_launch_templates_ami_id.sh` - for each Launch Template lists the AMI ID of the latest version. Useful to check EKS upgrades of node groups via Terragrunt have taken effect
+  - `aws_ec2_*.sh` - AWS [EC2](https://aws.amazon.com/ec2/) scripts:
+    - `aws_ec2_instance_*.sh` - AWS EC2 [Instance](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Instances.html) scripts:
+      - `aws_ec2_instance_name_to_id.sh` - looks up an EC2 instance ID from an instance name with extra safety checks that only a single instance ID is returned and a reverse lookup on that instance ID to re-verify it matches the name. This level of safety is important when wanting to terminate an EC2 instance by name. If an instance ID is passed, returns it as is for convenience. Used by adjacent scripts
+      - `aws_ec2_instances.sh` - lists AWS EC2 instances, their DNS names and States in an easy to read table output
+      - `aws_ec2_instance_ip.sh` - determines an EC2 instance IP address, trying first for a public IP, or failing that a private IP
+      - `aws_ec2_instance_clone.sh` - clones an AWS EC2 instance by creating an AMI from the original and then booting a new instance from the AMI with the same settings as the original instance. Useful to testing risky things on a separate EC2 instance, such as Server Administrator recovery of Tableau
+      - `aws_ec2_instance_wait_for_ready.sh` - polls an AWS EC2 instance and waits for it to finish initializing to a ready state. Used by adjacent scripts
+      - `aws_ec2_instance_terminate_by_name.sh` - terminate an AWS EC2 instance by name for convenience, resolves its instance ID, verifies unique and then terminates by ID
+    - `aws_ec2_ami*.sh` - AWS EC2 [AMI](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AMIs.html) scripts:
+      - `aws_ec2_amis.sh` - list AWS EC2 AMIs belonging to your account in an easy to read table output
+      - `aws_ec2_ami_ids.sh` - lists AWS EC2 AMI IDs only, one per line, to be used in adjacent scripts that creating mapping tables and translate AMI IDs to names in inventory scripts `aws_info_ec2*.sh`
+      - `aws_ec2_ami_name_to_id.sh` - looks up an EC2 AMI ID from a name with extra safety checks that only a single AMI ID is returned and a reverse lookup on that AMI ID to re-verify it matches the name
+      - `aws_ec2_ami_boot.sh` - boots a personal EC2 instance of a given AMI for testing
+      - `aws_ec2_ami_boot_ssh.sh` - boots a personal EC2 instance of a given AMI, determines the public or private IP, and drops you into an SSH shell
+      - `aws_ec2_ami_create_from_instance.sh` - creates an AWS EC2 AMI from an EC2 instance and waits for it to become available for use
+      - `aws_ec2_ami_share_to_account.sh` - shares an AMI with another AWS account. Can specify AMI by name or id
+    - `aws_ec2_ebs_*.sh` - AWS EC2 [EBS](https://aws.amazon.com/ebs/) scripts:
+      - `aws_ec2_ebs_volumes.sh` - list EC2 instances and their EBS volumes in the current region
+      - `aws_ec2_ebs_create_snapshot_and_wait.sh - creates a snapshot of a given EBS volume ID and waits for it to complete with exponential backoff
+      - `aws_ec2_ebs_resize_and_wait.sh - resizes an EBS volume and waits for it to complete modifying and optionally optimizing with exponential backoff
+      - `aws_ec2_ebs_volumes_unattached.sh` - list an unattached EBS volumes in a table format
+    - `aws_ec2_launch_templates_ami_id.sh` - for each Launch Template lists the AMI ID of the latest version. Useful to check EKS upgrades of node groups via Terragrunt have taken effect
   - `aws_ecr_*.sh` - AWS [ECR](https://aws.amazon.com/ecr/) docker image management scripts:
     - `aws_ecr_docker_login.sh` - authenticates Docker to AWS ECR, inferring the ECR registry from the current AWS Account ID and Region
     - `aws_ecr_docker_build_push.sh` - builds a docker image and pushes it to ECR with not just the `latest` docker tag but also the current Git hashref and Git tags
@@ -526,6 +533,7 @@ Prometheus, OpenTSDB, InfluxDB etc.
   - `aws_eks_cluster_versions.sh` - iterates EKS clusters to list each AWS EKS cluster name and version in the current account. Combine with `aws_foreach_profile.sh` and `aws_foreach_region.sh` to audit your EKS cluster versions across accounts and regions
   - `aws_eks_addon_versions.sh` - lists the EKS addon versions available for the given cluster by checking its version before checking addons
   - `aws_eks_available_ips.sh` - lists the number of available IP addresses in the EKS subnets for the given cluster (5 required for an EKS upgrade)
+  - `aws_eks_ami_create.sh` - creates a custom EKS AMI quickly off the base EKS template and then running a shell script in it before saving it to a new AMI. See also [HariSekhon/Packer](https://github.com/HariSekhon/Packer) for more advanced build
   - `aws_kms_key_rotation_enabled.sh` - lists [AWS KMS](https://aws.amazon.com/kms/) keys and whether they have key rotation enabled
   - `aws_kube_creds.sh` - auto-loads all [AWS EKS](https://aws.amazon.com/eks/) clusters credentials in the current --profile and --region so your kubectl is ready to rock on AWS
   - `aws_kubectl.sh` - runs kubectl commands safely fixed to a given [AWS EKS](https://aws.amazon.com/eks/) cluster using config isolation to avoid concurrency race conditions
@@ -542,8 +550,11 @@ Prometheus, OpenTSDB, InfluxDB etc.
   - `aws_sso_accounts.sh` - lists all AWS SSO accounts the current SSO user has access to
   - `aws_sso_configs.sh` - generates AWS SSO configs for all AWS SSO accounts the currently logged in SSO user has access to
   - `aws_sso_configs_save.sh` - saves AWS SSO configs generated by `aws_sso_configs.sh` to `~/.aws/config` if they're not already found
+  - `aws_sso_account_id_names.sh` - parses AWS config for AWS SSO and outputs Account IDs and Profile names
   - `aws_sso_config_duplicate_sections.sh` - lists duplicate AWS SSO config sections that are using the same sso_account_id. Useful to deduplicate configs containing a mix of hand crafted and automatically generated `aws_sso_configs.sh`
   - `aws_sso_config_duplicate_profile_names.sh` - lists duplicate AWS SSO config profile names that are using the same sso_account_id
+  - `aws_accounts_missing_from_config.sh` - for a list of AWS Account IDs in stdin or files, finds those missing from AWS config
+  - `aws_sso_accounts_missing_from_list.sh` - for a list of AWS Account IDs in stdin or files, finds AWS SSO accounts in AWS config missing from the provided list
   - `aws_sso_env_creds.sh` - retrieves AWS SSO session credentials in the format of environment export commands for copying to other systems like Terraform Cloud
   - `aws_sso_role_arn.sh` - prints the currently authenticated AWS SSO user's role ARN in IAM policy usable format
   - `aws_sso_role_arns.sh` - prints all AWS SSO role ARNs in IAM policy usable format
@@ -735,6 +746,7 @@ See also [Knowledge Base notes for GCP](https://github.com/HariSekhon/Knowledge-
 - `kubectl_secrets_annotate_to_be_sealed.sh` - annotates secrets in current or given namespace to allow being overwritten by Sealed Secrets (useful to sync ArgoCD health)
 - `kubectl_secrets_not_sealed.sh` - finds secrets with no SealedSecret ownerReferences
 - `kubectl_secrets_to_be_sealed.sh` - finds secrets pending overwrite by Sealed Secrets with the managed annotation
+- `kubernetes_yaml_strip_live_fields.sh` - strips live fields from Kubernetes yaml object dumps. Useful so you can do `kubectl diff` or `kubectl apply` without hitting annoying errors about immutable fields left in exports from `kubectl get ... -o yaml`
 - `kubernetes_foreach_context.sh` - executes a command across all kubectl contexts, replacing `{context}` in each iteration (skips lab contexts `docker` / `minikube` / `minishift` to avoid hangs since they're often offline)
 - `kubernetes_foreach_namespace.sh` - executes a command across all kubernetes namespaces in the current cluster context, replacing `{namespace}` in each iteration
   - Can be chained with `kubernetes_foreach_context.sh` and useful when combined with `gcp_secrets_to_kubernetes.sh` to load all secrets from GCP to Kubernetes for the current cluster, or combined with `gke_kube_creds.sh` and `kubernetes_foreach_context.sh` for all clusters!
@@ -937,7 +949,8 @@ See also [Knowledge Base notes for Hadoop](https://github.com/HariSekhon/Knowled
   - `git_files_in_history.sh` - finds all filename / file paths in the git log history, useful for prepping for `git filter-branch`
   - `git_filter_branch_fix_author.sh` - rewrites Git history to replace author/committer name & email references (useful to replace default account commits). Powerful, read `--help` and `man git-filter-branch` carefully. Should only be used by Git Experts
   - `git_filter_repo_replace_text.sh` - rewrites Git history to replace a given text to scrub a credential or other sensitive token from history. Refuses to operate on tokens less than 8 chars for safety
-  - `git_submodules_update_repos.sh` - updates submodules (pulls and commits latest upstream github repo submodules) - used to cascade submodule updates throughout all my repos
+  - `git_submodules_update.sh` - updates all submodules in the local git repo to the latest commit of their detected default trunk branch
+  - `git_submodules_update_repos.sh` - updates submodules for all repos given as args or saved in the `setup/repos.txt` file
   - `git_askpass.sh` - credential helper script to use environment variables for git authentication
   - `markdown_generate_index.sh` - generates a markdown index list from the headings in a given markdown file such as README.md
   - `markdown_replace_index.sh` - replaces a markdown index section in a given markdown file using `markdown_generate_index.sh`
@@ -1431,6 +1444,14 @@ See also [Knowledge Base notes for Perl](https://github.com/HariSekhon/Knowledge
 - `avif_to_png.sh` - converts an Avif image to PNG to be usable on websites that don't support Webp images like LinkedIn
 - `webp_to_png.sh` - converts a Webp image to PNG to be usable on websites that don't support Webp images like Medium
 
+#### Terminal Gif Capture
+
+Each of these three scripts creates an animated Git from running terminal commands and then opens the resulting gif.
+
+- `ttygif.sh` - uses `ttyrec` and `ttygif`
+- `asciinema.sh` - uses  `asciinema` and `agg`
+- `terminalizer.sh` - uses Terminalizer
+
 #### Audio
 
 - `mp3_set_artist.sh` / `mp3_set_album.sh` - set the artist / album tag for all mp3 files under given directories. Useful for grouping artists/albums and audiobook author/books (eg. for correct importing into Mac's Books.app)
@@ -1442,8 +1463,12 @@ See also [Knowledge Base notes for Perl](https://github.com/HariSekhon/Knowledge
 - `avi_to_mp4.sh` - converts avi files to mp4 using ffmpeg. Useful to be able to play videos on devices like smart TVs that may not recognize newer codecs otherwise
 - `mkv_to_mp4.sh` - converts mkv files to mp4 using ffmpeg. Same use case as above
 - `youtube_download_video.sh` - downloads a YouTube video to mp4 with maximum quality and compatibility usng yt-dlp
+  - `facebook_download_video.sh` - same as above for Facebook
+  - `twitter_download_video.sh` - same as above for Twitter / X
+  - `x_download_video.sh` - same as above for X / Twitter
 - `youtube_download_channel.sh` - downloads all videos from a given YouTube channel using yt-dlp
 - `video_to_720p_mp4` - converts one or more video files to 720p mp4 format using ffmpeg. Useful to make good trade-off of quality vs size for social media sharing
+- `vidopen.sh` - opens the given video file using whatever available tool is found on Linux or Mac
 
 See also [Knowledge Base notes for MultiMedia](https://github.com/HariSekhon/Knowledge-Base/blob/main/multimedia.md).
 
