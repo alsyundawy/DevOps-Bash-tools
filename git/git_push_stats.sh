@@ -26,9 +26,13 @@ Shows the Git push stats to the remote origin for the current branch - number of
 
 Utilizes adjacent scripts:
 
-    git_origin_log_to_head.sh
+    git_origin_commit_count_to_push.sh
 
-    git_origin_diff_to_head.sh
+    git_origin_line_count_to_push.sh
+
+    git_origin_diff_to_push.sh
+
+    git_origin_files_to_push.sh
 "
 
 # used by usage() in lib/utils.sh
@@ -39,16 +43,30 @@ help_usage "$@"
 
 #min_args 1 "$@"
 
-num_commits="$("$srcdir/git_origin_commits_to_push.sh")"
+num_commits="$("$srcdir/git_origin_commit_count_to_push.sh")"
+
+num_lines_changed="$("$srcdir/git_origin_line_count_to_push.sh")"
 
 num_lines_diff="$("$srcdir/git_origin_diff_to_push.sh" | wc -l | sed 's/[[:space:]]*//g')"
 
-# delete the last line of diff only if it's blank,
-# so that when there is nothing to push we get 0 instead of 1 line as the result
-num_lines_changed="$("$srcdir/git_origin_lines_changed_to_push.sh")"
+files="$("$srcdir/git_origin_files_to_push.sh")"
+
+files_added="$(grep -c '^A' <<< "$files" || :)"
+
+files_modified="$(grep -c '^M' <<< "$files" || :)"
+
+files_deleted="$(grep -c '^D' <<< "$files" || :)"
+
+files_renamed="$(grep -c '^R' <<< "$files" || :)"
+
+files_other="$(grep -c -v '^[AMDR]' <<< "$files" || :)"
+
+files_total="$(grep -c '.' <<< "$files" || :)"
 
 cat <<EOF
-Stats for Push to Origin
+Stats for Push to Origin:
+
+    $(git remote -v | awk '/^origin[[:space:]]/{print $2; exit}')
 
 Number of Commits: $num_commits
 
@@ -56,4 +74,19 @@ Number of Lines Changed: $num_lines_changed
 
 Number of Lines Diff: $num_lines_diff
 
+Files Added:    $files_added
+Files Modified: $files_modified
+Files Deleted:  $files_deleted
+Files Renamed:  $files_renamed
+Files Other:    $files_other
+Files Total:    $files_total
+
 EOF
+
+if [ "$files_total" != "$((files_added + files_modified + files_deleted + files_renamed))" ]; then
+    echo
+    warn "Total Files != ( Added + Modified + Deleted + Renamed )
+
+Check what the 'Other Files' are
+"
+fi

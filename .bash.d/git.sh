@@ -78,6 +78,7 @@ addf(){
     git ci -m "added $*"
 }
 alias gadd='git add'
+# beware covers up ImageMagick 'import' screenshot command (see HariSekhon/Knowledge-Base mac.md page)
 alias import=gitimport
 alias co=checkout
 alias commit="git commit"
@@ -107,10 +108,12 @@ alias tag="githg tag"
 alias tags='git tag'
 alias tagr='git_tag_release.sh'
 alias gitlogwc='git log --oneline | wc -l'
-alias um=updatemodules
+alias um=git_submodules_update.sh
 #type browse &>/dev/null || alias browse=gbrowse
 alias gbrowse=gitbrowse
 alias gb='gitbrowse'
+alias prbrowse='gh pr view --web'  # uses GitHub CLI
+alias prb=prbrowse
 #alias gh='gitbrowse github'  # clashes with GitHub CLI
 alias gl='gitbrowse gitlab'
 alias bb='gitbrowse bitbucket'
@@ -184,7 +187,7 @@ git_root(){
     popd &>/dev/null || return 1
 }
 alias gitroot=git_root
-alias cdgitroot="cd $(git_root)"
+alias cdgitroot='cd "$(git_root)"'
 
 gitgc(){
     cd "$(git_root)" || :
@@ -243,9 +246,7 @@ gitbrowse(){
         return 1
     fi
     if [[ "$url_base" =~ github.com ]]; then
-        if [ -n "$path" ]; then
-            path="blob/master/$path"
-        else
+        if [ -z "$path" ]; then
             path+="#readme"
         fi
     else
@@ -909,75 +910,6 @@ gitfind(){
     for refid in $refids; do
         git tag --contains "$refid"
     done | sort -u
-}
-
-# useful for smaller things:
-#
-# git submodule foreach --recursive 'git checkout master && git pull'
-#
-updatemodules(){
-    if isGit .; then
-        git pull --no-edit
-        #git submodule update --init --remote
-        for submodule in $(git submodule | awk '{print $2}'); do
-            if [ -d "$submodule" ] && ! [ -L "$submodule" ]; then
-                pushd "$submodule" || continue
-                git stash
-                git checkout "$(git_default_branch)"
-                git pull --no-edit
-                git submodule update
-                # shellcheck disable=SC2164
-                popd
-            fi
-        done
-        echo
-        for submodule in $(git submodule | awk '{print $2}'); do
-            if [ -d "$submodule" ] && ! [ -L "$submodule" ] && ! git status "$submodule" | grep -q nothing; then
-                git commit -m "updated $submodule" "$submodule" || break
-            fi
-        done &&
-        make updatem ||
-        echo FAILED
-        echo
-        for submodule in $(git submodule | awk '{print $2}'); do
-            if [ -d "$submodule" ] && ! [ -L "$submodule" ]; then
-                pushd "$submodule" || continue
-                git stash pop
-                # shellcheck disable=SC2164
-                popd
-            fi
-        done
-    else
-        echo "Not a Git repository! "
-        return 1
-    fi
-}
-
-upl(){
-    local repos="pylib pytools lib tools bash-tools nagios-plugins npk"
-    # pull all repos first so can handle merge requests if needed
-    for repo in $repos; do
-        echo
-        echo "* Pulling latest repo changes:  $repo"
-        echo
-        pushd "$github/$repo" &&
-        git pull --no-edit &&
-        popd &&
-        hr || return 1
-    done
-    echo
-    echo "UNATTEND FROM HERE"
-    echo
-    for repo in $repos; do
-        echo
-        echo "* Performing latest submodule updates:  $repo"
-        echo
-        pushd "$github/$repo" &&
-        ! updatemodules 2>&1 | tee /dev/stderr | grep -e ERROR -e FAIL &&
-        git push &&
-        popd &&
-        hr || return 1
-    done
 }
 
 #stagemerge(){

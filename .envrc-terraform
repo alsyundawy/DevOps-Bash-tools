@@ -21,6 +21,12 @@ set -euo pipefail
 [ -n "${DEBUG:-}" ] && set -x
 #srcdir="$(dirname "${BASH_SOURCE[0]}")"
 
+# set this to the local repo's config instead of $HOME/.terraformrc
+#export TF_CLI_CONFIG_FILE="$PWD/configs/.terraformrc"
+
+# if not already set in $HOME/.terraformrc
+#export TF_PLUGIN_CACHE_DIR="$HOME/.terraform.d/plugin-cache"
+
 # XXX: beware that tfenv and tgswitch replace the terraform / terragrunt in the path and this is a race condition between different shells
 #	   it is not as good as the KUBECONFIG trick done in the .envrc-kubernetes
 
@@ -34,6 +40,26 @@ export TFENV_AUTO_INSTALL=true
 
 # Terragrunt
 export TG_VERSION=0.39.2
+
+# Terragrunt Provide Cache prevents wasting tonnes of space &time re-downloading duplicate 600MB
+# Provider plugins for every Terragrunt module resulting in massive duplication see:
+#
+#   https://terragrunt.gruntwork.io/docs/features/provider-cache-server/
+#
+# Stores plugins in:
+#
+#   $HOME/.cache/terragrunt/providers
+#       or on Mac
+#   $HOME/Library/Caches/terragrunt/providers
+#
+export TG_PROVIDER_CACHE=1
+export TG_PROVIDER_CACHE_HOST=127.0.0.1
+#
+#export TG_PROVIDER_CACHE_DIR="/new/path/to/cache/dir"
+#
+# to cache from registries other than registry.terraform.io, registry.opentofu.org
+# eg. if you have your own private registry
+#export TG_PROVIDER_CACHE_REGISTRY_NAMES="example1.com,example2.com"
 
 # if tgswitch is installed, trigger it to use the above TF_VERSION environment variable and switch to the correct version of Terragrunt
 # better than adding the ugly shell hook from the docs - https://github.com/warrensbox/tgswitch?tab=readme-ov-file#get-the-version-from-a-subdirectory

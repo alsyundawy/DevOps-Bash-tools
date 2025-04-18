@@ -60,10 +60,10 @@ if ! type "$apt" >/dev/null 2>&1; then
     exit 1
 fi
 
-opts=""
+opts="-o DPkg::Lock::Timeout=1200"
 if [ -f /.dockerenv ]; then
     echo "running inside docker, not installing recommended extra packages unless specified to save space"
-    opts="--no-install-recommends"
+    opts="$opts --no-install-recommends"
 fi
 if is_CI; then
     echo "running in CI quiet mode"
@@ -125,7 +125,7 @@ echo
 # sudo set in lib/utils-bourne.sh
 # want splitting of $opts
 # shellcheck disable=SC2154,SC2086
-[ -n "${NO_UPDATE:-}" ] || $sudo "$apt" $opts update
+[ -n "${NO_UPDATE:-}" ] || $sudo "$apt" update $opts
 
 if [ -n "${NO_FAIL:-}" ]; then
     # shellcheck disable=SC2086

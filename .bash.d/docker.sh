@@ -43,7 +43,7 @@ alias dps='docker ps'
 alias dpsa='docker ps -a'
 alias dst="dockerhub_show_tags.py"
 # -l shows latest container, -q shows only ID
-alias dl='docker ps -lq'
+#alias dl='docker ps -lq'
 alias dockerimg='$EDITOR "$bash_tools/setup/docker-images.txt"'
 
 # wipe out exited containers
@@ -138,8 +138,8 @@ function dockerrunrm(){
     #    echo "warning: using alpine:2.* with args but alpine:2.* doesn't have a default CMD so adding 'sh' arg" >&2
     #    args="$args sh"
     #fi
-    # want arg splitting
-    docker run --rm -ti -v "$PWD":/pwd -w /pwd "${args[@]}"
+    local basedir="${PWD##*/}"
+    docker run --rm -ti -v "$PWD":"/$basedir" -w "/$basedir" "${args[@]}"
 }
 alias drun='docker run --rm -ti -v "${PWD}":/app'
 

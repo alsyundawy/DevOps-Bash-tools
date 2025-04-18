@@ -50,13 +50,24 @@ branch="$1"
 
 default_trunk_branch="$(default_branch)"
 
+timestamp "Checking out branch '$branch'"
+# this actually wipes out any previous the merge state test
+# - if script were to crash out, simply re-running would be enough
+git checkout "$branch"
+echo
+
+timestamp "Pulling latest changes to branch '$branch'"
+git pull ||
+timestamp "Pull failed but that may be ok because the upstream branch may have been auto-deleted upon merge, continuing..."
+echo
+
 timestamp "Checking out default trunk branch '$default_trunk_branch'"
 # this actually wipes out any previous the merge state test
 # - if script were to crash out, simply re-running would be enough
 git checkout "$default_trunk_branch"
 echo
 
-timestamp "Pulling latest changes"
+timestamp "Pulling latest changes to default trun branch '$default_trunk_branch'"
 git pull
 echo
 

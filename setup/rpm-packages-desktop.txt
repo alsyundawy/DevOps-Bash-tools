@@ -165,6 +165,7 @@ rancid
 rancid-cgi
 rancid-core
 rancid-utils
+rbenv
 rdesktop
 router-audit-tool
 rpm-build
@@ -188,6 +189,7 @@ tftp
 tftpd
 tilda
 toilet
+tokei  # lines of code counter
 tomboy
 tshark
 virt-manager

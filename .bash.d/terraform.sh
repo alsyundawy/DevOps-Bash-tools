@@ -40,6 +40,9 @@ elif ! [ -x "$TERRAGRUNT_TFPATH" ]; then
     unset TERRAGRUNT_TFPATH
 fi
 
+export TG_PROVIDER_CACHE=1
+export TG_PROVIDER_CACHE_HOST=172.0.0.1
+
 alias tf=terraform
 alias tfp='tf plan'
 alias tfa='tf apply'
@@ -54,7 +57,11 @@ tffu(){
     local lock_id="${1:-}"
     # self-determine the lock if not provided
     if [ -z "$lock_id" ]; then
-        lock_id="$(terraform plan -input=false -no-color 2>&1 | grep -A 1 'Lock Info:' | awk '/ID:/{print $2}')"
+        lock_id="$(terraform plan -input=false -no-color 2>&1 | grep -A 1 'Lock Info:' | awk '/ID:/{print $NF; exit}')"
+    fi
+    if [ -z "$lock_id" ]; then
+        echo "Failed to determine lock ID" >&2
+        return 1
     fi
     terraform force-unlock -force "$lock_id"
 }
@@ -66,12 +73,23 @@ alias tgaa='tga -auto-approve'
 alias tgip='tg init && tgp'
 alias tgia='tg init && tga'
 
+# the fix for .terraform.lock.hcl:
+#
+#   the cached package for registry.terraform.io/hashicorp/aws 5.80.0 (in .terraform/providers) does not match any of the checksums recorded in the dependency lock file
+#
+alias tfprov='terraform  providers lock -platform=windows_amd64 -platform=darwin_amd64 -platform=linux_amd64'
+alias tgprov='terragrunt providers lock -platform=windows_amd64 -platform=darwin_amd64 -platform=linux_amd64'
+
 unalias tgfu &>/dev/null || :
 tgfu(){
     local lock_id="${1:-}"
     # self-determine the lock if not provided
     if [ -z "$lock_id" ]; then
-        lock_id="$(terragrunt plan -input=false -no-color 2>&1 | grep -A 1 'Lock Info:' | awk '/ID:/{print $2}')"
+        lock_id="$(terragrunt plan -input=false -no-color 2>&1 | grep -A 1 'Lock Info:' | awk '/ID:/{print $NF; exit}')"
+    fi
+    if [ -z "$lock_id" ]; then
+        echo "Failed to determine lock ID" >&2
+        return 1
     fi
     terragrunt force-unlock -force "$lock_id"
 }

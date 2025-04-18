@@ -24,7 +24,8 @@ srcdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 usage_description="
 Prints all AWS SSO ARNs in IAM policy usable format
 
-Requires AWS CLI to be installed and configured
+
+$usage_aws_cli_required
 "
 
 # used by usage() in lib/utils.sh
@@ -48,6 +49,4 @@ help_usage "$@"
 
 aws iam list-roles --query 'Roles[*].Arn' --output text |
 tr '[:space:]' '\n' |
-grep 'aws-reserved/sso.amazonaws.com' |
-# strip the middle bit which isn't in the IAM policy format
-sed ' s|aws-reserved/sso.amazonaws.com/[^/]*/||'
+grep '/aws-reserved/sso.amazonaws.com/'

@@ -820,7 +820,7 @@ wc:
 												-e lib/ \
 												-e install/ \
 												-e setup/ \
-												-e 'tests?/' \
+												-e 'tests*/' \
 												-e vagrant/ \
 												| wc -l | sed 's/[[:space:]]//g'
 	@printf 'of which .bash*:\t\t'
@@ -832,7 +832,7 @@ wc:
 	@printf 'of which setup/:\t\t'
 	@tr ' ' '\n' <<< "$(CODE_FILES)" | grep -c setup/
 	@printf 'of which test(s)/:\t\t'
-	@tr ' ' '\n' <<< "$(CODE_FILES)" | grep -Eec 'tests?/'
+	@tr ' ' '\n' <<< "$(CODE_FILES)" | grep -Ec 'tests*/'
 	@printf 'of which vagrant/:\t\t'
 	@tr ' ' '\n' <<< "$(CODE_FILES)" | grep -c vagrant/
 
@@ -863,3 +863,17 @@ repos:
 		printf '\n## More Core Repos\n\n<!-- OTHER_REPOS_START -->\n\n<!-- OTHER_REPOS_END -->\n' >> README.md; \
 	fi; \
 	markdown_replace_repos.sh
+
+mac-exclude-backups:
+	@for path in $(MAC_TIME_MACHINE_BACKUP_EXCLUDE_PATHS); do \
+		if [[ "$${path:0:1}" != / ]]; then \
+			path="$$PWD/$$path"; \
+		fi; \
+		echo "Excluding: $$path"; \
+		sudo tmutil addexclusion -p "$$path"; \
+	done
+
+nobackup:
+	@if uname | grep -q Darwin; then \
+		$(MAKE) mac-exclude-backups; \
+	fi

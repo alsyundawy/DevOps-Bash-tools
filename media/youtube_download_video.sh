@@ -22,18 +22,46 @@ srcdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # shellcheck disable=SC2034,SC2154
 usage_description="
-Downloads a YouTube video to mp4 with maximum quality and compatibility using yt-dlp
+Downloads a YouTube, Facebook or Twitter / X video to mp4 with maximum quality and compatibility using yt-dlp
+
+Opens the video automatically for you to check the download
+
+Even resumes downloads after network interruptions or a Control-C and re-run the command later
 
 Installs yt-dlp (for downloading) and ffmpeg (for conversions) via OS package manager if not already installed
+
+If you run into a error determining a video format to download such as this:
+
+    WARNING: [youtube] RVVDi1PHgw4: nsig extraction failed: Some formats may be missing
+
+If you run into this error:
+
+    ERROR: [youtube] ...: Sign in to confirm you’re not a bot.
+
+Then set this in your shell first with the name of your browser:
+
+    export YT_DLP_COOKIES_FROM_BROWSER=chrome
+
+Try to upgrade yt-dlp first as sites like YouTube update their site breaking this and requiring a yt-dlp update
 "
 
 # used by usage() in lib/utils.sh
 # shellcheck disable=SC2034
-usage_args="<youtube_video_url>"
+usage_args="<video_url> [<filename>.mp4 <yt-dlp-args>]"
 
 help_usage "$@"
 
 min_args 1 "$@"
+#max_args 2 "$@"
+
+url="$1"
+file_basename_without_ext="${2:-%(title)s}"
+shift || :
+shift || :
+
+output_filename="$file_basename_without_ext.%(ext)s"
+
+format="bestvideo[ext=mp4][vcodec^=avc1]+bestaudio[ext=m4a]/best[ext=mp4]"
 
 #"$srcdir/../packages/install_packages_if_absent.sh" yt-dlp ffmpeg
 
@@ -66,11 +94,54 @@ done
 #       /best: falls back to the best single file if the video+audio combination isn't available
 #
 # for maximum compatibility specify compatible formats
+#
+#    --output "%(title)s.%(ext)s" \
+#
 yt-dlp \
-    --format "bestvideo[ext=mp4][vcodec^=avc1]+bestaudio[ext=m4a]/best[ext=mp4]" \
+    --format "$format" \
     --merge-output-format mp4 \
     --continue \
     --no-overwrite \
-    --output "%(title)s.%(ext)s" \
+    --retries 50 \
+    --output "$output_filename" \
     ${DEBUG:+--verbose} \
-    "$1"
+    ${YT_DLP_COOKIES_FROM_BROWSER:+--cookies-from-browser "$YT_DLP_COOKIES_FROM_BROWSER"} \
+    "$@" \
+    "$url"
+
+if [ "${2:-}" ]; then
+    # quicker and should always be the arg and .mp4 due to the --format options above
+    filename="$file_basename_without_ext.mp4"
+else
+    # if the filename isn't specified, we can infer it since no filename specified means no path specified so
+    # we can infer it to be the most recent file with an mp4 extension in $PWD
+    # shellcheck disable=SC2012
+    # this doesn't work reliably, the timestamp of a newer downloaded video file can be older, resulting in opening
+    # the wrong video
+    #"$srcdir/vidopen.sh" "$(ls -t ./*.mp4 | head -n1)"
+    timestamp "Determining download filename"
+    # "$format" is only needed here for it to return the right file extension
+    # in the "$output_filename" format eg. '.mp4' instead of '.webm'
+    filename="$(
+        yt-dlp --get-filename \
+               --format "$format" \
+               --output "$output_filename" \
+               ${YT_DLP_COOKIES_FROM_BROWSER:+--cookies-from-browser "$YT_DLP_COOKIES_FROM_BROWSER"} \
+               "$@" \
+               "$url"
+    )"
+fi
+if ! [ -f "$filename" ]; then
+    die "Failed to find expected output file: $filename"
+fi
+timestamp "Touching file timestamp to make it easier to find when browsing"
+touch -- "$filename"
+#if is_mac; then
+#    timestamp "Showing in Finder"
+#    open -R "$filename"
+#fi
+if [ -z "${NO_VIDEO_OPEN:-}" ]; then
+    timestamp "Opening video file: $filename"
+    "$srcdir/vidopen.sh" "$filename"
+fi
+timestamp "Download Complete: $filename"

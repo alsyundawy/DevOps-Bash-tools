@@ -27,6 +27,13 @@ bash_tools="${bash_tools:-$(dirname "${BASH_SOURCE[0]}")/..}"
 
 is_mac || return
 
+export HOMEBREW_DISPLAY_INSTALL_TIMES=1
+#export HOMEBREW_DEBUG=1
+#export HOMEBREW_CLEANUP_MAX_AGE_DAYS=30  # default: 120
+
+# Stops Mac calling update_terminal_cwd() which causes a tonne of noise during set -x tracing
+export INSIDE_EMACS=1
+
 alias osash="osascript -i"
 alias osashell=osash
 
@@ -78,6 +85,12 @@ macsleep(){
     sudo pmset sleepnow
 }
 
+nosleep(){
+    echo "Running: caffeinate -s $*"
+    echo "(works even if you close the Macbook lid but will still sleep on battery power)"
+    caffeinate -s "$@"
+}
+
 silence_startup(){
     sudo nvram SystemAudioVolume=%80
 }
@@ -114,7 +127,7 @@ alias vlc="/Applications/VLC.app/Contents/MacOS/VLC"
 
 # clear paste buffer
 clpb(){
-    copy_to_clipboard < /dev/null
+    copy_to_clipboard.sh < /dev/null
 }
 
 macmac(){

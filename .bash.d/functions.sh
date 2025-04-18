@@ -97,26 +97,37 @@ pstg(){
     less $LESS
 }
 
-copy_to_clipboard(){
-    if is_mac; then
-        cat | pbcopy
-    elif is_linux; then
-        cat | xclip
-    else
-        echo "ERROR: OS is not Darwin/Linux"
-        return 1
-    fi
-}
+# externalized to copy_to_clipboard.sh script
+#copy_to_clipboard(){
+#    if is_mac; then
+#        cat | pbcopy
+#    elif is_linux; then
+#        cat | xclip
+#    else
+#        echo "ERROR: OS is not Darwin/Linux"
+#        return 1
+#    fi
+#}
 
 unalias clip &>/dev/null || :
 # args are optional
 # shellcheck disable=SC2120
 clip(){
     if [ $# -gt 0 ]; then
-        copy_to_clipboard < "$1"
+        copy_to_clipboard.sh < "$1"
     else
-        copy_to_clipboard
+        copy_to_clipboard.sh
     fi
+}
+
+dle(){
+    if [ "$PWD" = "$HOME" ]; then
+        cd ~/Downloads
+    fi
+    dl "$@" &&
+    # doesn't persist past a pause/unpause
+    #osascript -e 'tell application "QuickTime Player" to set rate of document 1 to 2' &&
+    exit
 }
 
 deccp(){
@@ -188,6 +199,11 @@ findup(){
     done
     echo "Not found in above path: $arg" >&2
     return 1
+}
+
+cdup(){
+    local arg="$1"
+    cd "$(findup "$arg")"
 }
 
 lld(){
