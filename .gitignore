@@ -501,6 +501,13 @@ fastlane/.env.default
 
 iOSInjectionProject/
 
+# ixGuard
+ixguard-license.txt
+mapping.yml
+protectionreport.html
+statistics.yml
+telemetry_dump.json
+
 # ============================================================================ #
 #
 # Regenerate all sections below in to a single arg for API call via:

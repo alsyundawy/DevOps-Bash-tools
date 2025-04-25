@@ -40,7 +40,7 @@ If you run into this error:
 
 Then set this in your shell first with the name of your browser:
 
-    export YT_DLP_COOKIES_FROM_BROWSER=chrome
+    export COOKIES_FROM_BROWSER=chrome
 
 Try to upgrade yt-dlp first as sites like YouTube update their site breaking this and requiring a yt-dlp update
 "
@@ -97,6 +97,8 @@ done
 #
 #    --output "%(title)s.%(ext)s" \
 #
+# Increased retries to 50 because hotel wifi sucks around the world, which is why you want to download the videos
+# for reliable offline play in the first place (or watching on the plane)
 yt-dlp \
     --format "$format" \
     --merge-output-format mp4 \
@@ -105,7 +107,7 @@ yt-dlp \
     --retries 50 \
     --output "$output_filename" \
     ${DEBUG:+--verbose} \
-    ${YT_DLP_COOKIES_FROM_BROWSER:+--cookies-from-browser "$YT_DLP_COOKIES_FROM_BROWSER"} \
+    ${COOKIES_FROM_BROWSER:+--cookies-from-browser "$COOKIES_FROM_BROWSER"} \
     "$@" \
     "$url"
 
@@ -126,7 +128,7 @@ else
         yt-dlp --get-filename \
                --format "$format" \
                --output "$output_filename" \
-               ${YT_DLP_COOKIES_FROM_BROWSER:+--cookies-from-browser "$YT_DLP_COOKIES_FROM_BROWSER"} \
+               ${COOKIES_FROM_BROWSER:+--cookies-from-browser "$COOKIES_FROM_BROWSER"} \
                "$@" \
                "$url"
     )"
