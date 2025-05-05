@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 #  vim:ts=4:sts=4:sw=4:et
+#  args: 'Hacking the Planet!'
 #
 #  Author: Hari Sekhon
-#  Date: 2025-02-17 22:35:54 +0700 (Mon, 17 Feb 2025)
+#  Date: 2025-05-05 14:35:55 +0300 (Mon, 05 May 2025)
 #
 #  https///github.com/HariSekhon/DevOps-Bash-tools
 #
@@ -22,7 +23,7 @@ srcdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # shellcheck disable=SC2034,SC2154
 usage_description="
-Change input to sPaStIcCaSe for replying to people who don't understand economics, demographics or logic
+Change input to Hackercase => h4cK3Rc453 for l33t speak
 
 Accepts a string, file or standard input
 
@@ -35,23 +36,10 @@ usage_args="[<string_or_file>]"
 
 help_usage "$@"
 
-capitalize_alternate(){
-    awk '{
-        for (i = 1; i <= length($0); i++) {
-            c = substr($0, i, 1);
-            if (i % 2 == 0) {
-                printf toupper(c);
-            } else {
-                printf tolower(c);
-            }
-        }
-        print "";
-    }'
-}
 
 if [ $# -eq 0 ]; then
     log "Reading from standard input"
-    cat "$@"
+    cat "$*"
 else
     if [[ "$1" =~ ^.?/ ]] || [ -f "$1" ]; then
         log "Reading from files: $*"
@@ -60,6 +48,17 @@ else
         echo "$*"
     fi
 fi |
-capitalize_alternate |
+spasticcase.sh |
+sed '
+    s/a/4/gi;
+    s/b/8/gi;
+    s/e/3/gi;
+    s/i/1/gi;
+    s/o/0/gi;
+    # these reduce readability
+    #s/g/6/gi;
+    #s/s/5/gi;
+    #s/t/7/gi;
+' |
 tee >("$srcdir/copy_to_clipboard.sh")
 # copies to clipboard and also sends to stdout to allow further pipeline processing
