@@ -27,12 +27,22 @@ Launches tmux and runs the commands given as args in horizontally balanced panes
 
 Fast way to launch a bunch of commands in an easily reviewable way
 
+If there is only one arg which is a single digit integer, then launches that many \$SHELL panes
+
 Autogenerates a new session name in the form of \$PWD-\$epoch for uniqueness
+
+Example:
+
+    ${0##*/} htop 'iostat 1'
+
+    ${0##*/} bash bash
+
+    ${0##*/} 2
 "
 
 # used by usage() in lib/utils.sh
 # shellcheck disable=SC2034
-usage_args='"<command_1>" ["<command_2>" "<command_3>" ...]'
+usage_args='"<command_1>" "<command_2>" ["<command_3>" ...]'
 
 help_usage "$@"
 
@@ -58,6 +68,21 @@ session="$pwd-$epoch"
 cmd1="$1"
 
 shift || :
+
+if [ $# -eq 0 ]; then
+   if [[ "$cmd1" =~ ^[[:digit:]]$ ]]; then
+        shell="${SHELL:-bash}"
+        count="$cmd1"
+        cmd1="$shell"
+        args=()
+        for ((i = 1; i < count; i++)); do
+            args+=("$shell")
+        done
+        set -- "${args[@]}"
+    else
+        usage "Error: two or more args required unless you are specifying a count of shell panes to launch, otherwise there would be no panes to split"
+    fi
+fi
 
 timestamp "Starting new tmux session in detached mode called '$session' with command: $cmd1"
 tmux new-session -d -s "$session" "$cmd1"

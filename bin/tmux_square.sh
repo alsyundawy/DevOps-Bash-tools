@@ -23,30 +23,26 @@ srcdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # shellcheck disable=SC2034,SC2154
 usage_description="
-Launches tmux and runs the commands given as args in equally balanced horizontal panes
+Launches tmux and runs the commands given as args in a square tiled view
 
 Fast way to launch a bunch of commands in an easily reviewable way
 
-If there is only one arg which is a single digit integer, then launches that many \$SHELL panes
+If args aren't given, launches a \$SHELL in each pane, defaulting to bash if \$SHELL is not set
 
 Autogenerates a new session name in the form of \$PWD-\$epoch for uniqueness
 
 Example:
 
-    ${0##*/} htop 'iostat 1' bash
-
-    ${0##*/} bash bash bash
-
-    ${0##*/} 3
+    ${0##*/} htop 'iostat 1' 'ping google.com'
 "
 
 # used by usage() in lib/utils.sh
 # shellcheck disable=SC2034
-usage_args='"<command_1>" "<command_2>" ["<command_3>" ...]'
+usage_args='"<command_1>" "<command_2>" "<command_3>" "<command_4>"'
 
 help_usage "$@"
 
-min_args 1 "$@"
+max_args 4 "$@"
 
 pwd="${PWD:-$(pwd)}"
 epoch="$(date +%s)"
@@ -65,24 +61,14 @@ epoch="$(date +%s)"
 #
 session="$pwd-$epoch"
 
-cmd1="$1"
+shell="${SHELL:-bash}"
+
+cmd1="${1:-$shell}"
+cmd2="${2:-$shell}"
+cmd3="${3:-$shell}"
+cmd4="${4:-$shell}"
 
 shift || :
-
-if [ $# -eq 0 ]; then
-   if [[ "$cmd1" =~ ^[[:digit:]]$ ]]; then
-        shell="${SHELL:-bash}"
-        count="$cmd1"
-        cmd1="$shell"
-        args=()
-        for ((i = 1; i < count; i++)); do
-            args+=("$shell")
-        done
-        set -- "${args[@]}"
-    else
-        usage "Error: two or more args required unless you are specifying a count of shell panes to launch, otherwise there would be no panes to split"
-    fi
-fi
 
 timestamp "Starting new tmux session in detached mode called '$session' with command: $cmd1"
 tmux new-session -d -s "$session" "$cmd1"
@@ -91,13 +77,13 @@ if ! tmux has-session -t "$session"; then
     die "ERROR: tmux session exited too soon from first command: $cmd1"
 fi
 
-for cmd; do
-    timestamp "Splitting the tmux pane horizontally and launching command: $cmd"
-    tmux split-window -v -t "$session":0 "$cmd"
+for cmd in "$cmd2" "$cmd3" "$cmd4"; do
+    timestamp "Splitting the tmux window vertically and launching command: $cmd"
+    tmux split-window -h -t "$session":0 "$cmd"
 done
 
-timestamp "Balancing the tmux pane layout horizontally for tmux session: $session"
-tmux select-layout -t "$session":0 even-vertical
+timestamp "Balancing the tmux pane layout into a square tiled view for tmux session: $session"
+tmux select-layout -t "$session":0 tiled
 
 timestamp "Attaching to tmux session: $session"
 tmux attach-session -t "$session"
