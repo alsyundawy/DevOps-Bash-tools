@@ -24,10 +24,18 @@ srcdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 usage_description="
 Shortens the selected text in the prior window
 
+- Copies the selected text to the clipboard
 - Replaces \"and\" with \"&\"
-- Removes multiple blank lines between paragraphs (which result from the pbpaste/pbcopy pipeline otherwise)
+- Removes multiple blank lines between paragraphs (which can result from the copy/paste pipeline otherwise)
+- Pastes the clipboard text back over the selected text
 
-I use this a lot for LinkedIn comments due to the short 1250 character limit
+I use this a lot for LinkedIn comments in browser due to the short 1250 character limit
+
+Tested on macOS 14, and Debian 11 with Xfce and LDXE desktop environments
+
+Does not work on Debian 12 Gnome due to wayland lack of virtual keyboard support and even on Debian 12 Gnome on Xorg
+the keystrokes do not come out properly, not sure why yet, ping me if you have time to figure out why as that's not
+my day-to-day system to justify spending more time testing on it right now
 "
 
 # used by usage() in lib/utils.sh
@@ -43,7 +51,7 @@ if is_mac; then
 fi
 
 for bin in xdotool xclip; do
-    if ! type -P "$bin"; then
+    if ! type -P "$bin" &>/dev/null; then
         timestamp "Command '$bin' not found in \$PATH, attempting to install..."
         "$srcdir/../packages/install_packages.sh" "$bin"
     fi
@@ -53,9 +61,42 @@ check_bin xdotool
 check_bin xclip
 
 timestamp "Switching back to previous application"
-xdotool keydown alt
-xdotool key Tab
-xdotool keyup alt
+# for Debian 12 Gnome
+if [ "${XDG_SESSION_TYPE:-}" = wayland ]; then
+    #timestamp "Detected wayland rather than Xorg, attempting to use ydotool instead"
+    #if ! type -P ydotool &>/dev/null; then
+    #    timestamp "Command 'ydotool' not found in \$PATH, attempting to install..."
+    #    "$srcdir/../packages/install_packages.sh" ydotool
+    #fi
+    ##sudo ydotool key 56:1 15:1 15:0 56:0
+    #sudo ydotool key 56:1    # press Alt
+    #sleep 0.05
+    #sudo ydotool key 15:1    # press Tab
+    #sleep 0.05
+    #sudo ydotool key 15:0    # release Tab
+    #sleep 0.05
+    #sudo ydotool key 56:0    # release Alt
+
+    #timestamp "Detected wayland rather than Xorg, attempting to use wtype instead"
+    #if ! type -P wtype &>/dev/null; then
+    #    timestamp "Command 'wtype' not found in \$PATH, attempting to install..."
+    #    "$srcdir/../packages/install_packages.sh" wtype
+    #fi
+    #wtype -M alt -k tab -m alt
+    #
+    # Results in error:
+    #
+    #   Compositor does not support the virtual keyboard protocol
+    #
+    # This is because Gnome intentionally disables it for security - you must switch to an X11 session
+    die "ERROR: wayland based UI is not supported at this time due to lack of virtual keyboard protocol support (intentional by the developers)"
+else
+    xdotool keydown alt
+    #xdotool keydown Tab
+    #xdotool keyup Tab
+    xdotool key Tab
+    xdotool keyup alt
+fi
 sleep 0.3
 echo
 
