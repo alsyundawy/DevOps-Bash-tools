@@ -25,29 +25,76 @@
 --      https://github.com/HariSekhon/Knowledge-Base/blob/main/audio.md#automatically-switch-to-using-multi-output-device-when-connecting-headphones
 
 -- 'hs' is a Hammerspoon global
--- luacheck: globals hs
+-- luacheck: globals hs getFirstBlackholeInputDevice getFirstMultiOutputDevice switchToBlackholeInput switchToMultiOutput
 
-local function getFirstMultiOutputDevice()
-    local handle = io.popen("/opt/homebrew/bin/SwitchAudioSource -a | grep -m1 '^Multi-Output Device'")
+--local audioSwitchLog = hs.logger.new('audioSwitch', 'info')
+local log = hs.logger.new('audioSwitch', 'info')
+
+local lastSwitch = 0
+local debounceTime = 1  -- seconds
+
+--local function getFirstMultiOutputDevice()
+--
+-- global so we can check it from Hammerspoon Console for debugging
+function getFirstMultiOutputDevice()
+    local handle = io.popen("/opt/homebrew/bin/SwitchAudioSource -a -t output | grep -i -m1 '^Multi-Output Device'")
     if not handle then return nil end
     local result = handle:read("*l")
     handle:close()
     return result
 end
 
-local function switchToMultiOutput()
-    local target = getFirstMultiOutputDevice()
+function getFirstBlackholeInputDevice()
+    local handle = io.popen("/opt/homebrew/bin/SwitchAudioSource -a -t input | grep -i -m1 '^BlackHole'")
+    if not handle then return nil end
+    local result = handle:read("*l")
+    handle:close()
+    return result
+end
+
+--local function switchToMultiOutput()
+--
+-- global so we can check it from Hammerspoon Console for debugging
+function switchToBlackholeInput()
+    local target = getFirstBlackholeInputDevice()
     if target and #target > 0 then
-        hs.execute(string.format('/opt/homebrew/bin/SwitchAudioSource -s "%s"', target))
-        hs.notify.new({title="Audio Output Switched", informativeText="Now using: " .. target}):send()
+        hs.execute(string.format('/opt/homebrew/bin/SwitchAudioSource -t input -s "%s"', target))
+        hs.notify.new({title="Audio Input Switched", informativeText="Now using: " .. target}):send()
+        print("Audio Input Switched to " .. target)
     else
         hs.notify.new(
 			{
 				title="Audio Switch Failed",
-				informativeText="No Multi-Output Device found - you must first configure one" +
+				informativeText="No Blackhole Input Device found - you must first install Blackhole" ..
 							    ", see HariSekhon/Knowledge-Base Mac and Audio pages for details"
 			}
 		):send()
+        -- duplicates timestamp in the console and doesn't even prefix info level
+        --log.w("Audio Output Switch Failed")
+        print("Audio Input Switch Failed")
+    end
+end
+
+-- global so we can check it from Hammerspoon Console for debugging
+function switchToMultiOutput()
+    local target = getFirstMultiOutputDevice()
+    if target and #target > 0 then
+        hs.execute(string.format('/opt/homebrew/bin/SwitchAudioSource -t output -s "%s"', target))
+        hs.notify.new({title="Audio Output Switched", informativeText="Now using: " .. target}):send()
+        -- duplicates timestamp in the console and doesn't even prefix info level
+        --log.i("Audio Output Switched to " .. target)
+        print("Audio Output Switched to " .. target)
+    else
+        hs.notify.new(
+			{
+				title="Audio Switch Failed",
+				informativeText="No Multi-Output Device found - you must first configure one" ..
+							    ", see HariSekhon/Knowledge-Base Mac and Audio pages for details"
+			}
+		):send()
+        -- duplicates timestamp in the console and doesn't even prefix info level
+        --log.w("Audio Output Switch Failed")
+        print("Audio Output Switch Failed")
     end
 end
 
@@ -55,13 +102,24 @@ end
 
 --hs.audiodevice.watcher.setCallback(function(uid, eventName)
 hs.audiodevice.watcher.setCallback(function(_, eventName)
-    if eventName == "dOut " then
+    print("Audio event:", eventName, hs.audiodevice.defaultOutputDevice():name())
+    -- eventName turns out to be 'nil'
+    --if eventName == "dOut " then
         local current = hs.audiodevice.defaultOutputDevice():name()
         if current:match("AirPods") then
-            switchToMultiOutput()
+            --switchToMultiOutput()
+            local now = hs.timer.secondsSinceEpoch()
+            if now - lastSwitch > debounceTime then
+                lastSwitch = now
+                log.d("Debounce OK, switching output")
+                hs.timer.doAfter(0.5, switchToBlackholeInput)  -- small delay for macOS to settle
+                hs.timer.doAfter(0.5, switchToMultiOutput)  -- small delay for macOS to settle
+            else
+                log.d("Debounced, skipping switch")
+            end
         end
         --prevOutput = current
-    end
+    --end
 end)
 
 hs.audiodevice.watcher.start()
