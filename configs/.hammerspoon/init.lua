@@ -25,13 +25,22 @@
 --      https://github.com/HariSekhon/Knowledge-Base/blob/main/audio.md#automatically-switch-to-using-multi-output-device-when-connecting-headphones
 
 -- 'hs' is a Hammerspoon global
--- luacheck: globals hs getFirstBlackholeInputDevice getFirstMultiOutputDevice switchToBlackholeInput switchToMultiOutput
+-- luacheck: globals hs notify getFirstBlackholeInputDevice getFirstMultiOutputDevice switchToBlackholeInput switchToMultiOutput
 
 --local audioSwitchLog = hs.logger.new('audioSwitch', 'info')
 local log = hs.logger.new('audioSwitch', 'info')
 
 local lastSwitch = 0
 local debounceTime = 1  -- seconds
+
+function notify(msg)
+    -- print to Console log for debugging
+    print(msg)
+    -- treats everything between [[ ]] as a literal string
+    --hs.osascript.applescript([[ display notification msg with title "Hammerspoon" ]])
+    local script = string.format('display notification "%s" with title "Hammerspoon"', msg)
+    hs.osascript.applescript(script)
+end
 
 --local function getFirstMultiOutputDevice()
 --
@@ -59,19 +68,23 @@ function switchToBlackholeInput()
     local target = getFirstBlackholeInputDevice()
     if target and #target > 0 then
         hs.execute(string.format('/opt/homebrew/bin/SwitchAudioSource -t input -s "%s"', target))
-        hs.notify.new({title="Audio Input Switched", informativeText="Now using: " .. target}):send()
-        print("Audio Input Switched to " .. target)
+        --hs.notify.new({title="Audio Input Switched", informativeText="Now using: " .. target}):send()
+        local msg="Audio Input Switched to: " .. target
+        notify(msg)
     else
-        hs.notify.new(
-			{
-				title="Audio Switch Failed",
-				informativeText="No Blackhole Input Device found - you must first install Blackhole" ..
-							    ", see HariSekhon/Knowledge-Base Mac and Audio pages for details"
-			}
-		):send()
+        local msg_device_not_found="No Blackhole Input Device found - you must first install Blackhole" ..
+					               ", see HariSekhon/Knowledge-Base Mac and Audio pages for details"
+        -- Deprecated API - doesn't work, use notify function workaround
+        --hs.notify.new(
+		--    {
+		--        title="Audio Input Switch Failed",
+		--        informativeText=msg_device_not_found
+		--    }
+		--):send()
         -- duplicates timestamp in the console and doesn't even prefix info level
         --log.w("Audio Output Switch Failed")
-        print("Audio Input Switch Failed")
+        local msg="Audio Input Switch Failed - " .. msg_device_not_found
+        notify(msg)
     end
 end
 
@@ -83,18 +96,22 @@ function switchToMultiOutput()
         hs.notify.new({title="Audio Output Switched", informativeText="Now using: " .. target}):send()
         -- duplicates timestamp in the console and doesn't even prefix info level
         --log.i("Audio Output Switched to " .. target)
-        print("Audio Output Switched to " .. target)
+        local msg="Audio Output Switched to: " .. target
+        notify(msg)
     else
-        hs.notify.new(
-			{
-				title="Audio Switch Failed",
-				informativeText="No Multi-Output Device found - you must first configure one" ..
-							    ", see HariSekhon/Knowledge-Base Mac and Audio pages for details"
-			}
-		):send()
+        local msg_device_not_found="No Multi-Output Device found - you must first configure one" ..
+					               ", see HariSekhon/Knowledge-Base Mac and Audio pages for details"
+        -- Deprecated API - doesn't work, use notify function workaround
+        --hs.notify.new(
+		--    {
+		--        title="Audio Output Switch Failed",
+		--        informativeText=msg_device_not_found
+		--    }
+		--):send()
         -- duplicates timestamp in the console and doesn't even prefix info level
         --log.w("Audio Output Switch Failed")
-        print("Audio Output Switch Failed")
+        local msg="Audio Output Switch Failed - " .. msg_device_not_found
+        notify(msg)
     end
 end
 
@@ -102,6 +119,7 @@ end
 
 --hs.audiodevice.watcher.setCallback(function(uid, eventName)
 hs.audiodevice.watcher.setCallback(function(_, eventName)
+    -- print to Console log for debugging
     print("Audio event:", eventName, hs.audiodevice.defaultOutputDevice():name())
     -- eventName turns out to be 'nil'
     --if eventName == "dOut " then
