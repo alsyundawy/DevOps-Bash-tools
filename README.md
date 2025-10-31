@@ -212,7 +212,7 @@ make
 - [Installation Scripts](#installation-scripts) for many popular open source technologies
 - [Linux & Mac](#linux--mac) - curl OAuth / JWT, LDAP, find duplicate files, SSL certificate get/validate, URL encoding/decoding, Vagrant
 - [Mac & AppleScript](#mac--applescript) - Mac settings and UI automation scripts, send keystrokes, mouse clicks,
-  detect foreground app, switch app, detect locked screen or screensaver, activate screensaver
+  detect foreground app, switch app, detect locked screen or screensaver, activate screensaver, Hammerspoon system event handlers such as automatically switching audio to be able to Shazam while watching on AirPods
 - [Monitoring](#monitoring) - Grafana, Prometheus, Node Exporter, scripted collection of common Linux & Mac cli
   monitoring stats and log locations for quick generation of vendor support tarball bundles both locally and over SSH
 - [AWS - Amazon Web Services](#aws---amazon-web-services) - AWS account summary, lots of IAM reports, CIS Benchmark config hardening, EC2, ECR, EKS, Spot termination, S3 access logging, KMS key rotation info, SSM, CloudTrail, CloudWatch billing alarm with SNS notification topic and subscription for email alerts
@@ -326,6 +326,7 @@ Top-level `.bashrc` and `.bash.d/` directory:
   user crontab
 - `download_url_file.sh` - downloads a file from a URL using wget with no clobber and continue support, or curl with atomic replacement to avoid race conditions. Used by `github/github_download_release_file.sh`, `github_download_release_jar.sh`, and `install/download_*_jar.sh`
 - `curl_auth.sh` - shortens `curl` command by auto-loading your OAuth2 / JWT API token or username & password from environment variables or interactive starred password prompt through a ram file descriptor to avoid placing them on the command line (which would expose your credentials in the process list or OS audit log files). Used by many other adjacent API querying scripts
+- `curl_with_cookies.sh` - extracts cookies for a given URL from your `\$BROWSER`'s cookie jar and passes them to the `curl` command along with the rest of the args (workaround for older curl builds and Homebrew builds that don't have the newer `--cookies-from-browser functionality)
 - `find_duplicate_files*.sh` - finds duplicate files by size and/or checksum in given directory trees. Checksums are only done on files that already have matching byte counts for efficiency
 - `find_broken_links.sh` - find broken links with delays to avoid tripping defenses
 - `find_broken_symlinks.sh` - find broken symlinks pointing to non-existent files/directories
@@ -398,6 +399,8 @@ Mac automation scripts to automate the Mac UI and settings
 - `is_screensaver_running.scpt` - detect if the screensaver is running to stop sending keystrokes or mouse clicks
 - `screensaver_activate.scpt` - activate screensaver
 - `shorten_text_selection.scpt` - shortens the selected text in the prior window. Replaces `and` with `&` and crushes out multiple blank lines. I use this for LinkedIn comments due to the short 1250 character limit
+
+`configs/.hammerspoon/init.lua` - event handlers to automatically switch from connecting AirPods to multi-output audio to be able to Shazam songs while watching movies or TV shows on AirPods
 
 See also [Mac](https://github.com/HariSekhon/Knowledge-Base/blob/main/mac.md) page
 in [HariSekhon/Knowledge-Base](https://github.com/HariSekhon/Knowledge-Base).
