@@ -5,6 +5,7 @@
 
 # run: CASK=1 ../packages/brew_install_packages.sh brew-packages-desktop-casks.txt
 
+alfred
 anaconda
 atom
 barrier
@@ -28,6 +29,7 @@ podman
 postman
 powershell
 protonvpn
+raycast
 spotify
 transmission
 tor-browser
