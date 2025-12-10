@@ -110,6 +110,7 @@ exiv2     # view image metadata
 fastlane  # for Mobile CI/CD development
 ffmpeg
 #filezilla  # GUI ftp client - not found
+fio  # disk I/O speed test
 firebase-cli
 fish
 flyscrape
@@ -201,6 +202,7 @@ ubuntu/microk8s/microk8s
 midnight-commander
 minio
 #mitmproxy
+mkcert  # simple tool to make locally trusted development certificates - used by spotify_api_token.sh for https localhost callback
 mosh
 # nagios-plugins clashes
 monitoring-plugins
@@ -215,6 +217,7 @@ netcat
 ngrep
 nmap
 #node  # NodeJS
+nss
 #ntfstool  # for accessing NTFS volumes - unsigned requires Security approval and installing kernel driver
 #octave
 #oniguruma  # regex library
