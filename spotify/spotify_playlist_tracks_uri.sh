@@ -65,7 +65,7 @@ playlist_id="$("$srcdir/spotify_playlist_name_to_id.sh" "$playlist_id" "$@")"
 # shellcheck disable=SC2154
 url_path="/v1/playlists/$playlist_id/tracks?limit=100&offset=$offset"
 
-output(){
+print_output(){
     #jq -r '.' <<< "$output"
 
     # If you set \$SPOTIFY_PLAYLIST_TRACKS_UNAVAILABLE=1 then will only output tracks that are unavailable (greyed out on Spotify)
@@ -83,5 +83,7 @@ while not_null "$url_path"; do
     output="$("$srcdir/spotify_api.sh" "$url_path" "$@")"
     #die_if_error_field "$output"
     url_path="$(get_next "$output")"
-    output
+    print_output
+    # slow down a bit to try to reduce hitting Spotify API rate limits and getting 429 errors on large playlists
+    sleep 0.1
 done
