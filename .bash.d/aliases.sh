@@ -255,6 +255,11 @@ doc_alias(){
     local prefix="${2:-d}"
     [ -f "$docpath" ] || return 1
     docfile="${docpath##*/}"
+    if ! [[ "$docfile" =~ \.(txt|md)$ ]]; then
+        if [[ "$docfile" =~ \. ]]; then
+            return 1
+        fi
+    fi
     # slows down shell creation, will drain battery
 #    if [ -L "$docpath" ]; then
 #        # brew install coreutils to get greadlink since Mac doesn't have readlink -f
