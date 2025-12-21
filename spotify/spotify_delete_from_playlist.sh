@@ -191,8 +191,9 @@ delete_URIs_from_playlist(){
     fi
 }
 
-for filename in "${@:-/dev/stdin}"; do
-    delete_URIs_from_playlist < "$filename"
-done
+delete_URIs_from_playlist < <(
+    cat "${@:-/dev/stdin}" |
+    sort -u
+)
 
 timestamp "$count tracks deleted from playlist '$playlist_name'"
