@@ -17,6 +17,8 @@ set -euo pipefail
 [ -n "${DEBUG:-}" ] && set -x
 srcdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+default_exclude_regex='.DS_Store$|\.nfo$|\.part$'
+
 # shellcheck disable=SC2034
 usage_description="
 Finds duplicate files by file size in bytes
@@ -24,6 +26,12 @@ Finds duplicate files by file size in bytes
 Output format:
 
 <size_in_bytes>     <filename>
+
+Default exclusion list ERE regex is:
+
+    $default_exclude_regex
+
+You can override this by setting environment variable \$EXCLUDE_REGEX
 
 For a much more sophisticated duplicate file finder utilizing size, checksums, basenames and
 even partial basenames via regex match see
@@ -44,20 +52,19 @@ usage_args="[<dir1> <dir2> ...]"
 
 help_usage "$@"
 
+exclude_regex="${EXCLUDE_REGEX:-$default_exclude_regex}"
+
 last_size=""
 last_filename=""
 last_printed=0
 
 # GNU coreutils du has bytes, whereas Mac's du only goes to the less granular blocks which is less accurate
 if is_mac; then
-    du_files(){
-        gdu -ab "$@"
+    du(){
+        gdu "$@"
     }
-else
-    du_files(){ du -ab "$@"; }
+    export -f du
 fi
-# export function to be used in subshell with xargs, intentionally name it differently than du to make debugging easier
-export -f du_files
 
 while read -r size filename; do
     if [ "$size" = "$last_size" ]; then
@@ -71,4 +78,13 @@ while read -r size filename; do
     fi
     last_size="$size"
     last_filename="$filename"
-done < <(for dir in "${@:-$PWD}"; do find "$dir" -type f -print0; done | xargs -0 bash -c 'du_files "$@"' | sort -k1n)
+done < <(
+    for dir in "${@:-$PWD}"; do
+        find "$dir" -type f
+    done |
+    # find -print0 breaks this so do it afterwards using tr before passing to xargs -0
+    { grep -Evai -e "$exclude_regex" || : ; } |
+    tr '\n' '\0' |
+    xargs -0 sh -c 'du -ab "$@"' |
+    sort -k1n
+)
