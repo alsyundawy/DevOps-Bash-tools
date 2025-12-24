@@ -146,6 +146,7 @@ pastebinit
 pdfgrep
 PEAR-PHP_Shell
 perl-doc
+perl-HTML-Parser
 perl-Image-ExifTool
 pidgin
 pidgin-sipe
@@ -205,6 +206,7 @@ x86info
 xclip
 xdotool
 xkbset
+xmlstartlet
 xosview
 xprobe
 xsel

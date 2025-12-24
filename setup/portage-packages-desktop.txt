@@ -100,12 +100,14 @@ ddrescue
 debootstrap
 #denyhosts
 dev-libs/geoip
+dev-perl/HTML-Parser
 dev-perl/List-MoreUtils
 dev-perl/Net-Netmask
 dev-perl/net-ssh-perl
 dev-perl/Perl-Critic
 dev-perl/perltidy
 dev-util/git
+dev-xml/xmlstarlet
 dhcpd-syntax
 dhcping
 dia
