@@ -181,6 +181,8 @@ else
     id_file="$backup_dir/id/$filename.id.txt"
     snapshot_id="$(jq -r '.snapshot_id' <<< "$playlist_json" | tr -d '\n')"
 
+    # renaming a playlist or changing its description also changes the snapshot ID,
+    # not just adding/removing/reordering tracks, triggering a full re-download
     if [ -f "$id_file" ] && [ "$snapshot_id" = "$(cat "$id_file")" ]; then
         echo -n ' => Snapshot ID unchanged'
     else
@@ -193,7 +195,7 @@ else
         mv -f "$tmp" "$backup_dir_spotify/$filename"
         #untrap
         # try to avoid hitting HTTP 429 rate limiting
-        sleep 0.1
+        #sleep 0.1
         num_track_uris="$(wc -l < "$backup_dir_spotify/$filename" | sed 's/[[:space:]]*//')"
 
         echo -n "OK ($num_track_uris) => Tracks "
@@ -213,4 +215,4 @@ fi
 echo " => $SECONDS secs"
 
 # try to avoid hitting HTTP 429 rate limiting
-sleep 0.1
+#sleep 0.1

@@ -139,7 +139,7 @@ delete_from_playlist(){
     #    die "Spotify API returned snapshot_id '$snapshot_id', please investigate with DEBUG=1 mode"
     #fi
     # slow down a bit to try to reduce hitting Spotify API rate limits and getting 429 errors on large playlists
-    sleep 0.1
+    sleep 1
 }
 
 delete_URIs_from_playlist(){
@@ -181,7 +181,6 @@ delete_URIs_from_playlist(){
 
         if [ "${#ids[@]}" -eq 100 ]; then
             delete_from_playlist "${ids[@]}"
-            sleep 1
             ids=()
         fi
     done
