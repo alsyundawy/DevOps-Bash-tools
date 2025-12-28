@@ -63,6 +63,11 @@ commit_playlist(){
         return
     fi
     timestamp "Checking playlist: $playlist"
+    line_count_human_playlist="$(wc -l < "$playlist" | sed 's/[[:space:]]//g')"
+    line_count_spotify_playlist="$(wc -l < "spotify/$playlist" | sed 's/[[:space:]]//g')"
+    if [ "$line_count_human_playlist" != "$line_count_spotify_playlist" ]; then
+        die "ERROR: line counts between '$playlist' and 'spotify/$playlist' do not match! Partially interrupted download?"
+    fi
     if git status -s -- "$playlist" "spotify/$playlist" | grep -q '^[?A]'; then
         git add "$playlist" "spotify/$playlist"
         git ci -m "added $playlist spotify/$playlist" "$playlist" "spotify/$playlist"
@@ -82,7 +87,7 @@ commit_playlist(){
         added_num="$(awk '{print $1}' <<< "$stats")"
         removed_num="$(awk '{print $2}' <<< "$stats")"
         if [ "$removed_num" -gt "$added_num" ]; then
-            die "ERROR: tracks have been removed from playlist '$playlist' top level file which were not removed from 'spotify/$playlist' - partial interrupted playlist download?"
+            die "ERROR: tracks have been removed from playlist '$playlist' top level file which were not removed from 'spotify/$playlist' - partial interrupted playlist download or files committed separately?"
         fi
         echo "Auto-committing playlist '$playlist' as no net removals"
         echo

@@ -22,7 +22,9 @@ srcdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # shellcheck disable=SC2034
 usage_description="
-Returns a Spotify access token from the Spotify API, using app credentials. This token is needed to access the rest of the Spotify API endpoints
+Returns a Spotify access token from the Spotify API, using app credentials and a Spotify cookie
+
+This token is needed to access the rest of the Spotify API endpoints
 
 Requires \$SPOTIFY_ID and \$SPOTIFY_SECRET to be defined in the environment
 
@@ -32,12 +34,24 @@ To get a token to access the private user data API endpoints:
 
 export SPOTIFY_PRIVATE=1
 
-This will then require an interactive browser pop-up prompt to authorize, at which point this script will capture and output the resulting token
+Since this requires a Spotify login cookie for the authentication workflow to request a token, it will either:
 
-Many scripts utilize this code and will automatically generate the authentication tokens for you if you have \$SPOTIFY_ID and \$SPOTIFY_SECRET environment variables set so you usually don't need to call this yourself
+1. Check pycookiecheat is available in the \$PATH, and if so:
+   - use it extract your \$BROWSER's Spotify cookie
+   - use the cookie to query the Spotify API authentication workflow endpoint
+   OR if pycookiecheat is not available...
+2. Launch an interactive browser pop-up to use your browser's Spotify cookie
+   - on macOS it'll auto close the new tab and return you to the previously active window using Applescript automation
+
+This script will capture the authentication workflow output using a redirect to a local loopback callback and then use
+that to further request an actual Spotify API token that can be used by other programs and print that to stdout
+
+Many scripts utilize this code and will automatically generate the authentication tokens for you if you have
+\$SPOTIFY_ID and \$SPOTIFY_SECRET environment variables set so you usually don't need to call this yourself
 
 
-For private tokens which require authorization pop-ups, if you want to avoid these on every run of these spotify scripts, you can preload a private authorized token in to your shell for an hour like so:
+For private tokens which require authorization pop-ups, if you want to avoid these on every run of these spotify
+scripts, you can preload a private authorized token in to your shell for an hour like so:
 
 export SPOTIFY_ACCESS_TOKEN=\"\$(SPOTIFY_PRIVATE=1 '$srcdir/../spotify/spotify_api_token.sh')
 
@@ -46,7 +60,8 @@ Generate an App client ID and secret for SPOTIFY_ID and SPOTIFY_SECRET environme
 
 https://developer.spotify.com/dashboard/applications
 
-Make sure to add a callback URL of exactly 'http://127.0.0.1:12345/callback' without the quotes to be able to generate private tokens
+Make sure to add a callback URL of exactly 'http://127.0.0.1:12345/callback'
+without the quotes to be able to generate private tokens
 "
 
 # used by usage() in lib/utils.sh
@@ -335,11 +350,17 @@ if not_blank "${SPOTIFY_PRIVATE:-}"; then
     fi
     trap -- EXIT
     {
-    url="https://accounts.spotify.com/authorize?client_id=$SPOTIFY_ID&redirect_uri=$redirect_uri_encoded&scope=$scope&response_type=code"
     # authorization code flow with PKCE
     #url="https://accounts.spotify.com/authorize?client_id=$SPOTIFY_ID&redirect_uri=$redirect_uri_encoded&scope=$scope&response_type=code&code_challenge_method=S256&code_challenge=$code_challenge"
-    # implicit grant flow would use response_type=token, but this requires an SSL connection in the redirect URI and would complicate things with localhost SSL server certificate management
-    if is_mac; then
+    # without PKCE
+    url="https://accounts.spotify.com/authorize?client_id=$SPOTIFY_ID&redirect_uri=$redirect_uri_encoded&scope=$scope&response_type=code"
+    # implicit grant flow would use response_type=token, but this requires an SSL connection in the redirect URI
+    # and would complicate things with localhost SSL server certificate management
+    if type -P pycookiecheat &>/dev/null; then
+        # this calls the Spotify url using your browser cookies, and automatically redirects to the local callback handler
+        # to collect and request the token without having to fire up the browser pop-up
+        "$srcdir/../bin/curl_with_cookies.sh" "$url"
+    elif is_mac; then
         log "URL: $url"
         frontmost_process="$("$applescript/get_frontmost_process.scpt")"
         "$srcdir/../bin/urlopen.sh" "$url"
