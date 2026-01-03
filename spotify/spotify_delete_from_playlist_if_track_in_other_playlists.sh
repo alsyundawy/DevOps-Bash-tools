@@ -52,19 +52,39 @@ spotify_token
 # BSD grep has a bug in grep -f, rely on GNU grep instead
 if is_mac; then
     grep(){
+        # handles grep -f properly
         command ggrep "$@"
+    }
+    sed(){
+        # handles + matching properly
+        command gsed "$@"
     }
 fi
 
-# URI \t Artist - Track format
-timestamp "Getting list of URI + Artist - Track names from target playlist '$playlist_to_delete_from'"
-playlist_uri_artist_tracks="$("$srcdir/spotify_playlist_tracks_uri_artist_track.sh" "$playlist_to_delete_from")"
-
-for playlist in "$@"; do
-    timestamp "Getting list of tracks from source playlist '$playlist'"
-    "$srcdir/spotify_playlist_tracks.sh" "$playlist"
-done |
-grep -f <(sed $'s/^/spotify:track:[[:alnum:]]\+\t/' <<< "$playlist_uri_artist_tracks") |
+# switched to optimized awk filtering instead to avoid all regex character issues and also enforce ending anchoring
+#grep -Ff <(
+"$srcdir/../bin/text_filter_ending_substrings.sh" \
+<(
+    for playlist in "$@"; do
+        timestamp "Getting list of Artist - Track names from source playlist: $playlist"
+        "$srcdir/spotify_playlist_tracks.sh" "$playlist"
+    done |
+    sort -u #|
+    # No longer needed since switching to optimized awk filtering using text_filter_ending_substrings.sh
+    # XXX: anchor the track name as as suffix regex to prevent it accidentally removing '... (Remix)' or similar alternate versions of tracks
+    #      this is a trade off vs using -F for regex safety - I am betting the fringe conditional of a track name having some character that
+    #      breaks when used as a regex, possibly resulting in missing an odd track, is far less common than the other failure scenario of
+    #      matching substings of track names. If this becomes a problem we can add escaping to special characters interpreted by regex
+    #sed 's/$/$/'
+) \
+<(
+    # Returns a list one per line in the format:
+    #
+    #   URI \t Artist - Track
+    #
+    timestamp "Getting list of URI + Artist - Track names from target playlist: $playlist_to_delete_from"
+    "$srcdir/spotify_playlist_tracks_uri_artist_track.sh" "$playlist_to_delete_from"
+) |
 # get just the URIs of matching tracks
 sed $'s/\t.*$//' |
 "$srcdir/spotify_delete_from_playlist.sh" "$playlist_to_delete_from"
