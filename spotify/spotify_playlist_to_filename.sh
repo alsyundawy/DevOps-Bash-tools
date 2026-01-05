@@ -47,15 +47,21 @@ help_usage "$@"
 #}
 
 sanitize_filename() {
-  # replace forward slash with unicode version so we can store playlist files that look like the real thing
-  # but avoid the breakage caused by directory separator
-  tr '/' '∕' |
-  perl -CS -Mutf8 -p -e '
-    s{[\\/:*?"<>|]}{_}g;             # Windows-invalid filename characters
-    s{[\x00-\x09\x0B-\x1F\x7F]}{_}g; # control chars except \n
-    s{[^\p{Print}\p{Emoji}\n]}{_}g;  # non-printable, non-emoji, keep \n
-    s/[ .]+$//;                      # trailing space or dot not allowed in Windows filenames
-  '
+    # replace forward slash with unicode version so we can store playlist files that look like the real thing
+    # but avoid the breakage caused by directory separator
+    tr '/' '∕' |
+    perl -CS -Mutf8 -p -e '
+        s{[\x00-\x09\x0B-\x1F\x7F]}{_}g;  # control chars except \n
+        s{[^\p{Print}\p{Emoji}\n]}{_}g;   # non-printable, non-emoji, keep \n
+    ' |
+    if is_windows; then
+        perl -CS -Mutf8 -p -e '
+            s{[\\/:*?"<>|]}{_}g;  # Windows-invalid filename characters
+            s/[ .]+$//;           # trailing space or dot (Windows)
+        '
+    else
+        cat
+    fi
 }
 
 if not_blank "$*"; then
