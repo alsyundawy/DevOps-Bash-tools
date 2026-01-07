@@ -17,6 +17,12 @@ set -euo pipefail
 [ -n "${DEBUG:-}" ] && set -x
 srcdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# shellcheck disable=SC1090,SC1091
+. "$srcdir/lib/utils.sh"
+
+# shellcheck disable=SC1090,SC1091
+. "$srcdir/../.bash.d/git.sh"
+
 # shellcheck disable=SC2034
 usage_description="
 Renames a Spotify playlist in both the \$PWD and \$PWD/spotify/ directories
@@ -25,34 +31,28 @@ to keep the Spotify backups in sync
 
 # used by usage() in lib/utils.sh
 # shellcheck disable=SC2034
-usage_args="<playlist_old_name> <playlist_new_name>"
-
-# shellcheck disable=SC1090,SC1091
-. "$srcdir/lib/utils.sh"
+usage_args="<old_playlist_name> <new_playlist_name>"
 
 help_usage "$@"
 
-# shellcheck disable=SC1090,SC1091
-. "$srcdir/../.bash.d/git.sh"
+num_args 2 "$@"
 
-rename(){
-    local from="$1"
-    local to="$2"
+old="$1"
+new="$2"
 
-    from="$("$srcdir/../spotify/spotify_playlist_to_filename.sh" "$from")"
-    to="$("$srcdir/../spotify/spotify_playlist_to_filename.sh" "$to")"
+old="$("$srcdir/../spotify/spotify_playlist_to_filename.sh" "$old")"
+new="$("$srcdir/../spotify/spotify_playlist_to_filename.sh" "$new")"
 
-    gitrename "$from" "$to"
+# the gitrename function in lib/git.sh has been updated to preserve the new file
+# and restore it after the move to then git diff and commit any updates
+gitrename "$old" "$new"
 
-    gitrename "spotify/$from" "spotify/$to"
+gitrename "spotify/$old" "spotify/$new"
 
-    if [ -f "$from.description" ]; then
-        gitrename "$from.description" "$to.description"
-    fi
+if [ -f "$old.description" ]; then
+    gitrename "$old.description" "$new.description"
+fi
 
-    if [ -f "id/$from.id.txt" ]; then
-        mv -v "id/$from.id.txt" "id/$to.id.txt"
-    fi
-}
-
-rename "$1" "$2"
+if [ -f "id/$old.id.txt" ]; then
+    mv -v "id/$old.id.txt" "id/$new.id.txt"
+fi
