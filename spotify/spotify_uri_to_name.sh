@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 #  vim:ts=4:sts=4:sw=4:et
 #
-#  args: ../playlists/spotify/Rocky
-#  args: ../playlists/spotify/Starred
+#  args: ../../playlists/spotify/Rocky
 #
 #  Author: Hari Sekhon
 #  Date: 2020-06-25 22:28:51 +0100 (Thu, 25 Jun 2020)
@@ -69,79 +68,83 @@ usage_args="[<files>] [<curl_options>]"
 
 help_usage "$@"
 
-#sleep_secs="0.1"
-sleep_secs="0"
+# try to avoid hitting HTTP 429 Too Many Requests as this leads to long ban periods of ~14 hours
+# throttle by this many seconds between bulk query requests
+sleep_secs="0.5"
 
 declare -a curl_options
 curl_options=()
 
 spotify_token
 
-uri_type="${SPOTIFY_URI_TYPE:-track}"
-
-if ! [[ "$uri_type" =~ ^(track|album|artist|episode)$ ]]; then
-    usage "invalid \$SPOTIFY_URI_TYPE '$uri_type' - must be one of: track, album, artist, episode"
-fi
-
-url_base="/v1/${uri_type}s"
-
-uri_inferred=0
 infer_uri_type(){
     local uri="$1"
-    if [ $uri_inferred = 0 ] && is_blank "${SPOTIFY_URI_TYPE:-}"; then
-        if [[ "$uri" =~ ^spotify:(track|album|artist|episode):|^https?://open.spotify.com/(track|album|artist|episode)/ ]]; then
-            for x in "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"; do
-                if not_blank "$x"; then
-                    uri_type="$x"
-                    url_base="/v1/${uri_type}s"
-                    break
-                fi
-            done
-        fi
+    if [[ "$uri" =~ ^spotify:(track|album|artist|episode): ]]; then
+        echo "${BASH_REMATCH[1]}"
+    elif [[ "$uri" =~ ^https?://open.spotify.com/(track|album|artist|episode)/ ]]; then
+        echo "${BASH_REMATCH[1]}"
+    else
+        # default fallback
+        echo "${SPOTIFY_URI_TYPE:-track}"
     fi
 }
 
 convert(){
-    while true; do
-        declare -a ids
-        ids=()
-        while [ "${#ids[@]}" -lt 50 ]; do
-            read -r -s uri || break
-            if is_blank "$uri"; then
-                break
-            fi
-            if is_local_uri "$uri"; then
-                if not_blank "${ids[*]:-}"; then
-                    query_bulk "${ids[@]}"
-                    ids=()
-                fi
-                output_local_uri "$uri"
-                continue
-            fi
-            infer_uri_type "$uri"
-            id="$(validate_spotify_uri "$uri")"
-            ids+=("$id")
-        done
-        if is_blank "${ids[*]:-}"; then
-            return
+    # associative array: type -> comma-separated IDs
+    declare -A batch_ids
+    declare -A batch_counts
+
+    while read -r -s uri || [ -n "$uri" ]; do
+        [ -z "$uri" ] && continue
+
+        # skip local URIs first
+        if is_local_uri "$uri"; then
+            # flush all current batches before outputting local
+            for t in "${!batch_ids[@]}"; do
+                query_bulk_type "$t" "${batch_ids[$t]}"
+                batch_ids["$t"]=""
+            done
+            output_local_uri "$uri"
+            continue
         fi
-        query_bulk "${ids[@]}"
+
+        # determine type of URI
+        type="$(infer_uri_type "$uri")"
+        id="$(validate_spotify_uri "$uri")"
+
+        # append to batch
+        batch_ids["$type"]+="$id,"
+        batch_counts["$type"]=$(( ${batch_counts["$type"]:-0} + 1 ))
+
+        # flush batch if it reaches 50
+        if [ "${batch_counts[$type]}" -ge 50 ]; then
+            query_bulk_type "$type" "${batch_ids[$type]}"
+            batch_ids["$type"]=""
+            batch_counts["$type"]=0
+        fi
+    done
+
+    # flush remaining batches
+    for t in "${!batch_ids[@]}"; do
+        [ -n "${batch_ids[$t]}" ] && query_bulk_type "$t" "${batch_ids[$t]}"
     done
 }
 
-query_bulk(){
-    local ids
-    # join array arg on commas
-    { local IFS=','; ids="$*"; }
-    if is_blank "$ids"; then
-        return
-    fi
-    url_path="$url_base?ids=$ids"
-    # cannot quote curl_options as when empty as this results in a blank literal which breaks curl
-    # shellcheck disable=SC2068
-    output="$("$srcdir/spotify_api.sh" "$url_path" ${curl_options[@]:-})"
-    #die_if_error_field "$output"
-    output
+# bulk query the correct endpoint per type to reduce the number of queries and to
+# both improve performance and try to avoid the dredded HTTP 429 Too Many Requests 14 hour ban
+query_bulk_type(){
+    local type="$1"
+    local ids_csv="${2%,}"  # remove trailing comma
+    [ -z "$ids_csv" ] && return
+
+    local url_base="/v1/${type}s"
+
+    if [ "${#curl_options[@]}" -gt 0 ]; then
+        "$srcdir/spotify_api.sh" "$url_base?ids=$ids_csv" "${curl_options[@]}"
+    else
+        "$srcdir/spotify_api.sh" "$url_base?ids=$ids_csv"
+    fi |
+    output  # pipe into jq output()
     sleep "$sleep_secs"
 }
 
@@ -171,40 +174,99 @@ output_local_uri(){
     "$srcdir/../bin/urldecode.sh" <<< "$track"
 }
 
+# This breaks on playlists with mixed URI types such as track + episode in my Love Island playlist so
+# push this logic out of bash and to jq where it can be handled in a better unified way
+#
+#output(){
+#    if [[ "$output" =~ \"(tracks|albums|artists|episodes)\"[[:space:]]*:[[:space:]]+\[[[:space:]]*null[[:space:]]*\] ]]; then
+#        echo "no matching $uri_type URI found - did you specify an incorrect URI or wrong \$SPOTIFY_URI_TYPE for that URI?" >&2
+#        return
+#    fi
+#    local conversion="@tsv"
+#    if not_blank "${SPOTIFY_CSV:-}"; then
+#        conversion="@csv"
+#    fi
+#    if [ "$uri_type" = track ]; then
+#        output_artist_item
+#    elif [ "$uri_type" = artist ]; then
+#        jq -r ".${uri_type}s[] | [([.name] | join(\", \"))] | $conversion"
+#    elif [ "$uri_type" = album ]; then
+#        output_artist_item
+#    else
+#        echo "URI type '$uri' parsing not implemented" >&2
+#        exit 1
+#    fi <<< "$output" |
+#    clean_output
+#}
+
+# Handled in unified output() function now depending on if fields are detected in jq
+#
+#output_artist_item(){
+#    if not_blank "${SPOTIFY_CSV:-}"; then
+#        # some tracks come out with blank artists and track name, skip these using select(name != "") filter to avoid blank lines
+#        # unfortunately some tracks actually do come out with blank artist and track name, this must be a bug inside Spotify, but
+#        # filtering it like this throws off the line counts verification and also the track might be blank but the artist might not be
+#        #jq -r ".${uri_type}s[] | select(.name != \"\") | [([.artists[].name] | join(\", \")), .name] | $conversion"
+#        jq -r ".${uri_type}s[] | [([.artists[].name] | join(\", \")), .name] | $conversion"
+#    else
+#        #jq -r ".${uri_type}s[] | select(.name != \"\") | [([.artists[].name] | join(\", \")), \"-\", .name] | $conversion"
+#        jq -r ".${uri_type}s[] | [([.artists[].name] | join(\", \")), \"-\", .name] | $conversion"
+#    fi
+#}
+
 output(){
-    if [[ "$output" =~ \"(tracks|albums|artists|episodes)\"[[:space:]]*:[[:space:]]+\[[[:space:]]*null[[:space:]]*\] ]]; then
-        echo "no matching $uri_type URI found - did you specify an incorrect URI or wrong \$SPOTIFY_URI_TYPE for that URI?" >&2
-        return
-    fi
     local conversion="@tsv"
     if not_blank "${SPOTIFY_CSV:-}"; then
         conversion="@csv"
     fi
-    if [ "$uri_type" = track ]; then
-        output_artist_item
-    elif [ "$uri_type" = artist ]; then
-        jq -r ".${uri_type}s[] | [([.name] | join(\", \"))] | $conversion"
-    elif [ "$uri_type" = album ]; then
-        output_artist_item
-    else
-        echo "URI type '$uri' parsing not implemented" >&2
-        exit 1
-    fi <<< "$output" |
+
+    jq -r '
+    # 1) Playlist items
+    (
+      .tracks?
+      | select(type == "object")
+      | .items[]?
+      | (.track // .episode)
+      | select(. != null)
+    ),
+
+    # 2) Bulk tracks
+    (
+      .tracks?
+      | select(type == "array")
+      | .[]?
+    ),
+
+    # 3) Bulk episodes
+    (
+      .episodes[]?
+    ),
+
+    # 4) Single track / episode object
+    (
+      select(type == "object" and (.type == "track" or .type == "episode"))
+    )
+
+    | if .type == "track" then
+        [
+          (.artists | map(.name) | join(", ")),
+          "-",
+          .name
+        ]
+      elif .type == "episode" then
+        [
+          .show.name,
+          "-",
+          .name
+        ]
+      else
+        empty
+      end
+    | '"$conversion"'
+    ' |
     clean_output
 }
-
-output_artist_item(){
-    if not_blank "${SPOTIFY_CSV:-}"; then
-        # some tracks come out with blank artists and track name, skip these using select(name != "") filter to avoid blank lines
-        # unfortunately some tracks actually do come out with blank artist and track name, this must be a bug inside Spotify, but
-        # filtering it like this throws off the line counts verification and also the track might be blank but the artist might not be
-        #jq -r ".${uri_type}s[] | select(.name != \"\") | [([.artists[].name] | join(\", \")), .name] | $conversion"
-        jq -r ".${uri_type}s[] | [([.artists[].name] | join(\", \")), .name] | $conversion"
-    else
-        #jq -r ".${uri_type}s[] | select(.name != \"\") | [([.artists[].name] | join(\", \")), \"-\", .name] | $conversion"
-        jq -r ".${uri_type}s[] | [([.artists[].name] | join(\", \")), \"-\", .name] | $conversion"
-    fi
-}
+export -f output
 
 clean_output(){
     tr '\t' ' ' |

@@ -8,7 +8,8 @@
 #
 #  License: see accompanying Hari Sekhon LICENSE file
 #
-#  If you're using my code you're welcome to connect with me on LinkedIn and optionally send me feedback to help steer this or other code I publish
+#  If you're using my code you're welcome to connect with me on LinkedIn
+#  and optionally send me feedback to help steer this or other code I publish
 #
 #  https://www.linkedin.com/in/HariSekhon
 #
@@ -22,11 +23,7 @@ srcdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # shellcheck disable=SC2034,SC2154
 usage_description="
-One-touch Spotify Backup of all or selected Spotify playlists
-
-If playlist args are given then backs up only those playlists
-
-Without args, backs up all public playlists
+Downloads the list of Spotify playlists
 
 $usage_playlist_help
 
@@ -35,7 +32,7 @@ $usage_auth_help
 
 # used by usage() in lib/utils.sh
 # shellcheck disable=SC2034
-usage_args="[<playlist> <playlist2> ...]"
+usage_args=""
 
 help_usage "$@"
 
@@ -47,30 +44,22 @@ if is_blank "${SPOTIFY_BACKUP_DIR:-}"; then
     fi
 fi
 
-section "Running Spotify Playlists Backup"
-
 spotify_token
 
 SECONDS=0
 
-if [ $# -gt 0 ]; then
-    echo "Backing up selected playlist(s):"
-    echo
-    for playlist in "$@"; do
-        printf '%s  ' "$(date '+%F %T')"
-        "$srcdir/spotify_backup_playlist.sh" "$playlist"
-    done
-    exit 0
-fi
-
 mkdir -pv "$SPOTIFY_BACKUP_DIR/spotify"
 
-"$srcdir/spotify_backup_playlists_list.sh"
-
+timestamp "Dumping list of Spotify playlists to $SPOTIFY_BACKUP_DIR/spotify/playlists.txt"
+tmp="$(mktemp)"
+"$srcdir/spotify_playlists.sh" > "$tmp"
+mv -f "$tmp" "$SPOTIFY_BACKUP_DIR/spotify/playlists.txt"
 echo >&2
 
-"$srcdir/spotify_backup_playlists.sh"
-
+timestamp "Stripping spotify playlist IDs from $SPOTIFY_BACKUP_DIR/spotify/playlists.txt => $SPOTIFY_BACKUP_DIR/playlists.txt"
+tmp="$(mktemp)"
+sed 's/^[^[:space:]]*[[:space:]]*//' "$SPOTIFY_BACKUP_DIR/spotify/playlists.txt" > "$tmp"
+mv -f "$tmp" "$SPOTIFY_BACKUP_DIR/playlists.txt"
 echo >&2
 
-timestamp "Spotify Backup completed in $SECONDS seconds"
+timestamp "Spotify playlists list downloaded"
