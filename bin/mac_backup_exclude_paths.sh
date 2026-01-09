@@ -37,6 +37,7 @@ $HOME/.ivy2
 $HOME/.m2
 $HOME/.minikube
 $HOME/.sbt
+$HOME/Downloads/TV
 $HOME/Downloads/Transmission
 $HOME/Downloads/YouTube
 $HOME/Library/Application Support/Spotify/PersistentCache
@@ -48,13 +49,19 @@ $HOME/Library/Developer/Xcode/DerivedData
 $HOME/Library/Logs/rancher-desktop
 $HOME/Library/Mobile Documents/com~apple~CloudDocs
 $HOME/Library/State/rancher-desktop
-$HOME/Library/State/rancher-desktop
 $HOME/VirtualBox VMs
 $HOME/go/bin
 $HOME/go/pkg
 $HOME/go/src/github.com
 $HOME/go/src/golang.org
-/System/Library/AssetsV2/com_apple_MobileAsset_MacSoftwareUpdate
+/usr/local/texlive
+/Library/Application Support/GarageBand
+/Library/AssetsV2/com_apple_MobileAsset_MacSoftwareUpdate
+/System//Library/AssetsV2/com_apple_MobileAsset_MacSoftwareUpdate
+/macOS Install Data
+/Data/macOS Install Data
+/Volumes/Data/macOS Install Data
+/System//Volumes/Data/macOS Install Data
 "
 
 if [ -n "${GOPATH:-}" ]; then
@@ -82,9 +89,14 @@ By default excludes the following common paths:
 
 $excluded_paths
 
-Find more paths to add as args using this command:
+Find more paths to add to the exclusion list using this command:
 
     du -max ~ | sort -k1n | tail -n 1000
+
+See also this next script to find out what is taking so long to populate the currently in-progress backup
+and racking up more GB of changes than you expected to find more things to exclude:
+
+    mac_backup_exclude_paths.sh
 "
 
 # used by usage() in lib/utils.sh
