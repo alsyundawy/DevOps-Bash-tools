@@ -74,8 +74,13 @@ set_to_liked(){
     if [ -z "$ids" ]; then
         return
     fi
+    timestamp "Liking tracks in batch:"
+    echo >&2
+    tr ',' '\n' <<< "$ids" |
+    sed 's/^/spotify:track:/' |
+    "$srcdir/spotify_uri_to_name.sh" || :
+    echo >&2
     "$srcdir/spotify_api.sh" "$url_path${ids}" -X PUT
-    tr ',' '\n' <<< "$ids"
 }
 
 if [ $# -gt 0 ]; then
@@ -96,6 +101,7 @@ while read -r track_uri; do
     if is_local_uri "$track_uri"; then
         continue
     fi
+    #echo "$track_uri"
     id="$(validate_spotify_uri "$track_uri")"
 
     ids+=("$id")

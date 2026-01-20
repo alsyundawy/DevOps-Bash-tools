@@ -8,7 +8,8 @@
 #
 #  License: see accompanying Hari Sekhon LICENSE file
 #
-#  If you're using my code you're welcome to connect with me on LinkedIn and optionally send me feedback to help steer this or other code I publish
+#  If you're using my code you're welcome to connect with me on LinkedIn
+#  and optionally send me feedback to help steer this or other code I publish
 #
 #  https://www.linkedin.com/in/HariSekhon
 #
@@ -26,19 +27,32 @@ Dumps the local Mac Shazam app's tracks one at a time, searches the Spotify app 
 and then deletes it from the Shazam local sqlite DB upon an Enter key press to proceed to the next one
 
 Shazam to Spotify apps workaround to Apple removing Spotify integration from Shazam
+
+Can optionally specify a number of tracks to stop after as an arg or environment variable \$SHAZAM_APP_DUMP_NUM_TRACKS
 "
 
 # used by usage() in lib/utils.sh
 # shellcheck disable=SC2034
-usage_args=""
+usage_args="[<num_tracks>]"
 
 help_usage "$@"
 
-no_args "$@"
+max_args 1 "$@"
+
+mac_only
+
+num="${1:-${SHAZAM_APP_DUMP_NUM_TRACKS:-1}}"
+
+if ! [[ "$num" =~ ^-?[[:digit:]]+$ ]]; then
+    die "Invalid argument given, must be an integer: $num"
+fi
 
 relaunch_shazam(){
     timestamp "Relaunching Shazam app to reflect removed tracks"
     "$srcdir/reopen_app.sh" Shazam
+    sleep 2
+    # hit Escape key to to minimize Shazam back to the menu bar
+    osascript -e "tell application \"System Events\" to key code 53"
     untrap
     exit
 }
@@ -52,5 +66,5 @@ while IFS=$'\t' read -r artist _ track; do
     read -r < /dev/tty
     "$srcdir/shazam_app_delete_track.sh" "$artist" "$track"
 done < <(
-    "$srcdir/shazam_app_dump_tracks.sh"
+    "$srcdir/shazam_app_dump_tracks.sh" "$num"
 )
