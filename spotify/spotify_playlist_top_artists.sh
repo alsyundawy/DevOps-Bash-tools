@@ -1,17 +1,18 @@
 #!/usr/bin/env bash
 #  vim:ts=4:sts=4:sw=4:et
 #
-#  args: "Upbeat & Sexual Pop"
-#  args: 64OO67Be8wOXn6STqHxexr
+#  args: "Favourites 💯 😎"
+#  args: 3iRkPfmGAPH9zOrOwPOibk
 #
 #  Author: Hari Sekhon
-#  Date: 2020-06-24 01:17:21 +0100 (Wed, 24 Jun 2020)
+#  Date: 2026-01-20 23:02:35 -0500 (Tue, 20 Jan 2026)
 #
 #  https://github.com/HariSekhon/DevOps-Bash-tools
 #
 #  License: see accompanying Hari Sekhon LICENSE file
 #
-#  If you're using my code you're welcome to connect with me on LinkedIn and optionally send me feedback to help steer this or other code I publish
+#  If you're using my code you're welcome to connect with me on LinkedIn
+#  and optionally send me feedback to help steer this or other code I publish
 #
 #  https://www.linkedin.com/in/HariSekhon
 #
@@ -22,12 +23,15 @@ set -euo pipefail
 [ -n "${DEBUG:-}" ] && set -x
 srcdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# shellcheck disable=SC1090,SC2154
+# shellcheck disable=SC1090,SC1091
 . "$srcdir/lib/spotify.sh"
 
 # shellcheck disable=SC2034,SC2154
 usage_description="
-Returns track names in a given Spotify playlist
+Returns the top artists for a given Spotify playlist by counting unique track names for each artist
+
+If HariSekhon/Spotify-tools is in the \$PATH it uses normalize_tracknames.pl for greater accuracy to
+collapse multiple versions such as Radio Edit and Album Version to only count that same song once
 
 Playlist argument can be a playlist name or a playlist ID (get this from spotify_playlists.sh)
 
@@ -36,11 +40,8 @@ Playlist argument can be a playlist name or a playlist ID (get this from spotify
 
 Output format:
 
-Artist - Track
-
-or if \$SPOTIFY_CSV environment variable is set then:
-
-\"Artist\",\"Track\"
+<unique_track_count> <artist>
+<unique_track_count> <artist2>
 
 
 $usage_playlist_help
@@ -71,24 +72,15 @@ playlist_id="$("$srcdir/spotify_playlist_name_to_id.sh" "$playlist_id" "$@")"
 url_path="/v1/playlists/$playlist_id/tracks?limit=100&offset=$offset"
 
 print_output(){
-    # If you set \$SPOTIFY_PLAYLIST_TRACKS_UNAVAILABLE=1 then will only output tracks that are unavailable (greyed out on Spotify)
-    # Can feed this in to spotify_delete_from_playlist.sh to crop them from TODO / Discover Backlog type playlists
-    #if [ -n "${SPOTIFY_PLAYLIST_TRACKS_UNAVAILABLE:-}" ]; then
-        # XXX: this isn't reliable, some tracks are still available when these fields are both empty :-/
-        # and debug dumps comparing tracks shows there are no other fields to differentiate whether a track is available or not
-    #    jq -r '.items[] | select(.track.uri) | select((.track.available_markets | length) == 0) | select((.track.album.available_markets | length) == 0)' <<< "$output"
-    #else
-    if not_blank "${SPOTIFY_CSV:-}"; then
-        jq -r '.items[].track | [([.artists[]?.name] | join(", ")), .name] | @csv'
-    else
-        jq -r '.items[].track | [([.artists[]?.name] | join(", ")), "-", .name] | @tsv'
-    fi <<< "$output" |
-    tr '\t' ' ' |
-    sed '
-        s/^[[:space:]]*-//;
-        s/^[[:space:]]*//;
-        s/[[:space:]]*$//
-    '
+    jq -r '
+      .items[]
+      | .track
+      | select(.name and .artists)
+      | .name as $track
+      | .artists[]
+      | [.name, $track]
+      | @tsv
+    ' <<< "$output"
 }
 
 while not_null "$url_path"; do
@@ -98,4 +90,20 @@ while not_null "$url_path"; do
     print_output
     # slow down a bit to try to reduce hitting Spotify API rate limits and getting HTTP 429 Too Many Requests on large playlists
     #sleep 0.1
-done
+done |
+# if HariSekhon/Spotify-tools is in the \$PATH, use this to deduplicate variations of the same track
+if type -P normalize_tracknames.pl &>/dev/null; then
+    normalize_tracknames.pl
+else
+    cat
+fi |
+sort -u |
+if [ -n "${DEBUG_ARTIST_TRACKS:-}" ]; then
+    cat
+else
+    cut -f1 |
+    sed '/^[[:space:]]*$/d' |
+    sort |
+    uniq -c |
+    sort -nr
+fi
