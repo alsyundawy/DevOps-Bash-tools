@@ -143,26 +143,48 @@ if liked; then
        [ "$liked_added_at" = "$(cat "$liked_added_cache")" ]; then
         echo -n '=> Latest Added Timestamp Unchanged'
     else
-        # XXX: sort the Liked URI and track orderings - although this breaks the fidelity between the playlist <=> spotify/playlist formats,
-        #      it's necessary to avoid recurring large diffs as Spotify seems to change the output ordering of this
         echo -n "=> URIs "
         #trap_cmd "cd \"$backup_dir_spotify\" && git checkout \"$filename\" &>/dev/null"
         #"$srcdir/spotify_liked_tracks_uri.sh" "$@" | sort -f > "$backup_dir_spotify/$filename"
         #untrap
         # better to just use atomic moves so we can ./commit.sh even while this is running
         # without being prompted with net removals by partially completed downloads
-        tmp="$(mktemp)"
-        "$srcdir/spotify_liked_tracks_uri.sh" "$@" | sort -f > "$tmp"
-        mv -f -- "$tmp" "$backup_dir_spotify/$filename"
-
+        track_tmp="$(mktemp)"
+        uri_tmp="$(mktemp)"
+        #"$srcdir/spotify_liked_tracks_uri.sh" "$@" | sort -f > "$tmp"
+        #mv -f -- "$tmp" "$backup_dir_spotify/$filename"
+        "$srcdir/spotify_liked_uri_artist_track.sh" |
+        while read -r uri track; do
+            if ! validate_spotify_uri "$uri" &>/dev/null &&
+               ! is_local_uri "$uri" ; then
+                die "Invalid Spotify URI returned: '$uri', for track: $track"
+            fi
+            echo "$track" >> "$track_tmp"
+            echo "$uri" >> "$uri_tmp"
+        done
+        #mv -f "$track_tmp" "$backup_dir/$filename"
+        #mv -f "$uri_tmp" "$backup_dir_spotify/$filename"
+        # XXX: sort the Liked URI and track orderings - although this breaks the fidelity between the playlist <=> spotify/playlist formats,
+        #      it's necessary to avoid recurring large diffs as Spotify seems to change the output ordering of this
+        sort -f "$track_tmp" > "$backup_dir/$filename"
+        sort -f "$uri_tmp" > "$backup_dir_spotify/$filename"
+        rm -f "$track_tmp"
+        rm -f "$uri_tmp"
+        # try to avoid hitting HTTP 429 rate limiting
+        sleep 0.1
         num_track_uris="$(wc -l < "$backup_dir_spotify/$filename" | sed 's/[[:space:]]*//')"
+        num_tracks="$(wc -l < "$backup_dir/$filename" | sed 's/[[:space:]]*//')"
+
+        if [ "$num_tracks" != "$num_track_uris" ]; then
+            die "ERROR: differing number of tracks ($num_tracks) vs URIs ($num_track_uris) detected for Liked Songs"
+        fi
 
         echo -n "OK ($num_track_uris) => Tracks "
         #trap_cmd "cd \"$backup_dir\" && git checkout \"$filename\" &>/dev/null"
         #"$srcdir/spotify_liked_tracks.sh" "$@" | sort -f > "$backup_dir/$filename"
-        tmp="$(mktemp)"
-        "$srcdir/spotify_liked_tracks.sh" "$@" | sort -f > "$tmp"
-        mv -f -- "$tmp" "$backup_dir/$filename"
+        #tmp="$(mktemp)"
+        #"$srcdir/spotify_liked_tracks.sh" "$@" | sort -f > "$tmp"
+        #mv -f -- "$tmp" "$backup_dir/$filename"
         #untrap
         echo "$liked_added_at" > "$liked_added_cache"
         echo -n 'OK'
@@ -232,13 +254,31 @@ else
         echo -n " => URIs "
         #trap_cmd "cd \"$backup_dir_spotify\" && git checkout \"$filename\" &>/dev/null"
         #"$srcdir/spotify_playlist_tracks_uri.sh" "$playlist_id" "$@" > "$backup_dir_spotify/$filename"
-        tmp="$(mktemp)"
-        "$srcdir/spotify_playlist_tracks_uri.sh" "$playlist_id" "$@" > "$tmp"
-        mv -f "$tmp" "$backup_dir_spotify/$filename"
+        track_tmp="$(mktemp)"
+        uri_tmp="$(mktemp)"
+        #"$srcdir/spotify_playlist_tracks_uri.sh" "$playlist_id" "$@" > "$tmp"
+        #mv -f "$tmp" "$backup_dir_spotify/$filename"
         #untrap
+        "$srcdir/spotify_playlist_tracks_uri_artist_track.sh" "$playlist_id" "$@" |
+        # TODO: consider replacing this with a tee to two streaming commands to avoid so many executions
+        while read -r uri track; do
+            if ! validate_spotify_uri "$uri" &>/dev/null &&
+               ! is_local_uri "$uri" ; then
+                die "Invalid Spotify URI returned: '$uri', for track: $track"
+            fi
+            echo "$track" >> "$track_tmp"
+            echo "$uri" >> "$uri_tmp"
+        done
+        mv -f "$track_tmp" "$backup_dir/$filename"
+        mv -f "$uri_tmp" "$backup_dir_spotify/$filename"
         # try to avoid hitting HTTP 429 rate limiting
-        #sleep 0.1
+        sleep 0.1
         num_track_uris="$(wc -l < "$backup_dir_spotify/$filename" | sed 's/[[:space:]]*//')"
+        num_tracks="$(wc -l < "$backup_dir/$filename" | sed 's/[[:space:]]*//')"
+
+        if [ "$num_tracks" != "$num_track_uris" ]; then
+            die "ERROR: differing number of tracks ($num_tracks) vs URIs ($num_track_uris) detected for playlist: $playlist"
+        fi
 
         echo -n "OK ($num_track_uris) => Tracks "
 
@@ -250,11 +290,11 @@ else
 
         # better to just use atomic moves so we can ./commit.sh even while this is running
         # without being prompted with net removals by partially completed downloads
-        tmp="$(mktemp)"
+        #tmp="$(mktemp)"
         # sometimes there are tracks that have blank names due to spotify data issues
         #"$srcdir/spotify_playlist_tracks.sh" "$playlist_id" "$@" | sed '/^[[:space:]]*$/d' > "$tmp"
-        "$srcdir/spotify_playlist_tracks.sh" "$playlist_id" "$@" > "$tmp"
-        mv -f "$tmp" "$backup_dir/$filename"
+        #"$srcdir/spotify_playlist_tracks.sh" "$playlist_id" "$@" > "$tmp"
+        #mv -f "$tmp" "$backup_dir/$filename"
         echo -n 'OK'
 
         old_filename="$(if [ -f "$playlist_metadata_filename_file" ]; then cat "$playlist_metadata_filename_file"; fi)"
@@ -306,4 +346,4 @@ fi
 echo " => $SECONDS secs"
 
 # try to avoid hitting HTTP 429 rate limiting
-#sleep 0.1
+sleep 0.1
