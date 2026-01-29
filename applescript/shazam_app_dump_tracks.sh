@@ -38,7 +38,7 @@ Tested on Shazam app version 2.11.0 - may need to be modified for other versions
 
 # used by usage() in lib/utils.sh
 # shellcheck disable=SC2034
-usage_args="[<num_tracks>]"
+usage_args="[<num_tracks|today|yesterday|week|last:num_days|YYYY-MM-DD>]"
 
 help_usage "$@"
 
@@ -46,11 +46,7 @@ max_args 1 "$@"
 
 mac_only
 
-num="${1:-${SHAZAM_APP_DUMP_NUM_TRACKS:-1}}"
-
-if ! [[ "$num" =~ ^-?[[:digit:]]+$ ]]; then
-    die "Invalid argument given, must be an integer: $num"
-fi
+arg="${1:-${SHAZAM_APP_DUMP_NUM_TRACKS:-today}}"
 
 dbpath="$(
     find ~/Library/Group\ Containers \
@@ -66,36 +62,106 @@ fi
 
 timestamp "Found Shazam App DB: $dbpath"
 
-#table="ZSHTAGRESULTMO"
+where_clause=""
+order_clause="ORDER BY r.ZDATE DESC"
+limit_clause=""
 
-# detect columns dynamically
-#cols="$(
-#    sqlite3 "$dbpath" "PRAGMA table_info($table);" |
-#    awk '{print $2}'
-#)"
+# macOS Core Data framework stores dates as seconds 2001-01-01 00:00:00 UTC, not unix epoch of 1970
+coredata_epoch_offset=978307200
 
-#artist_column="$(grep -m1 -E 'ARTIST' <<< "$cols" || :)"
-#track_column="$(grep -m1 -E 'TRACK' <<< "$cols" || :)"
-#date_column="$(grep -m1 -E 'DATE' <<< "$cols" || :)"
+# XXX: localtime strftime() may give off comparisons vs UTC stored date timestamps, so avoided for YYYY-MM-DD
+#      keeping local day for today/yesterday/week or last:N though
+case "$arg" in
+    today)
+        where_clause="
+            WHERE
+                r.ZDATE >= (
+                    strftime('%s', 'now', 'start of day', 'localtime') - $coredata_epoch_offset
+                )
+        "
+        order_clause="ORDER BY r.ZDATE ASC"
+        ;;
+    yesterday)
+        where_clause="
+            WHERE
+                r.ZDATE >= (
+                    strftime('%s', 'now', 'start of day', '-1 day', 'localtime') - $coredata_epoch_offset
+                )
+            AND
+                r.ZDATE < (
+                    strftime('%s', 'now', 'start of day', 'localtime') - $coredata_epoch_offset
+                )
+        "
+        order_clause="ORDER BY r.ZDATE ASC"
+        ;;
+    week)
+        where_clause="
+            WHERE
+                r.ZDATE >= (
+                    strftime('%s', 'now', 'start of day', '-6 days', 'localtime')
+                    - $coredata_epoch_offset
+                )
+        "
+        order_clause="ORDER BY r.ZDATE ASC"
+        ;;
+    last:*)
+        days="${arg#last:}"
 
-#[ -n "$artist_column" ] || die "Error: Failed to find artist column"
-#[ -n "$track_column" ] || die "Error: Failed to find track column"
-#[ -n "$date_column" ] || die "Error: Failed to find date column"
+        if ! [[ "$days" =~ ^[[:digit:]]+$ ]]; then
+            die "Invalid argument for last:N, must be a positive integer: $arg"
+        fi
 
-#timestamp "Found columns:
-#
-#$artist_column
-#$track_column
-#$date_column
-#"
+        where_clause="
+            WHERE
+                r.ZDATE >= (
+                    strftime('%s', 'now', '-$days days', 'localtime')
+                    - $coredata_epoch_offset
+                )
+        "
+        order_clause="ORDER BY r.ZDATE ASC"
+        ;;
+    ????-??-??)
+        where_clause="
+            WHERE
+                r.ZDATE >= (
+                    strftime('%s', '$arg', 'start of day')
+                    - $coredata_epoch_offset
+                )
+            AND
+                r.ZDATE < (
+                    strftime('%s', '$arg', 'start of day', '+1 day')
+                    - $coredata_epoch_offset
+                )
+        "
+        order_clause="ORDER BY r.ZDATE ASC"
+        ;;
+    *)
+        num="$arg"
 
+        if ! [[ "$num" =~ ^-?[[:digit:]]+$ ]]; then
+            die "Invalid argument given, must be an integer, 'today', or 'yesterday': $arg"
+        fi
+
+        if [ "$num" -gt 0 ]; then
+            limit_clause="LIMIT $num"
+        fi
+        ;;
+esac
 # my ~/.sqliterc forces pretty printing breaking the separator we need so -init /dev/null to ignore it
 sqlite3 "$dbpath" -init /dev/null -noheader -separator $'\t' \
 "
-    SELECT a.ZNAME AS artist, r.ZTRACKNAME AS track
-        FROM ZSHTAGRESULTMO r
-        LEFT JOIN ZSHARTISTMO a ON a.ZTAGRESULT = r.Z_PK
-        ORDER BY r.ZDATE DESC;
+    SELECT
+        a.ZNAME AS artist,
+        r.ZTRACKNAME AS track
+    FROM
+        ZSHTAGRESULTMO r
+    LEFT JOIN
+        ZSHARTISTMO a
+            ON
+        a.ZTAGRESULT = r.Z_PK
+    $where_clause
+    $order_clause
+    $limit_clause;
 " |
 sed '/^[[:space:]]*$/d' |
 while IFS=$'\t' read -r artist title; do
@@ -107,11 +173,6 @@ done |
 # from https://github.com/HariSekhon/DevOps-Perl-tools repo - use it if present in $PATH
 if type -P uniq_order_preserved.pl &>/dev/null; then
     uniq_order_preserved.pl
-else
-    cat
-fi |
-if [ "$num" -gt 0 ]; then
-    head -n "$num"
 else
     cat
 fi
