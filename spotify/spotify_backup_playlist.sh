@@ -37,6 +37,9 @@ Caches metadata locally in .spotify_metadata/ directory. Tracks playlist name to
 and playlist snapshot ID to avoid re-downloading playlists which haven't changed, reducing the number of Spotify API
 calls and therefore the likelihood of hitting HTTP 429 Too Many Requests throttling errors
 
+The environment variable SPOTIFY_PLAYLIST_FORCE_DOWNLOAD can be set to any value to force a playlist to redownload
+and ignore the last downloaded snapshot ID optimization above
+
 If the playlist name has changed Detects the playlist file is committed to Git, then calls:
 
     spotify_rename_playlist_files.sh
@@ -129,6 +132,16 @@ playlist_name_to_id(){
 }
 export -f playlist_name_to_id
 
+clean_trackname(){
+    local artist_track="$1"
+    sed '
+        s/^[[:space:]]*-//;
+        s/^[[:space:]]*//;
+        s/[[:space:]]*$//
+    ' <<< "$artist_track"
+}
+export -f clean_trackname
+
 if liked; then
     echo -n "$playlist_name "
 
@@ -140,7 +153,8 @@ if liked; then
     mkdir -pv "$liked_metadata_dir"
     liked_added_cache="$liked_metadata_dir/added_at"
     if [ -f "$liked_added_cache" ] &&
-       [ "$liked_added_at" = "$(cat "$liked_added_cache")" ]; then
+       [ "$liked_added_at" = "$(cat "$liked_added_cache")" ] &&
+       is_blank "${SPOTIFY_PLAYLIST_FORCE_DOWNLOAD:-}"; then
         echo -n '=> Latest Added Timestamp Unchanged'
     else
         echo -n "=> URIs "
@@ -159,8 +173,8 @@ if liked; then
                ! is_local_uri "$uri" ; then
                 die "Invalid Spotify URI returned: '$uri', for track: $track"
             fi
-            echo "$track" >> "$track_tmp"
             echo "$uri" >> "$uri_tmp"
+            clean_trackname "$track" >> "$track_tmp"
         done
         #mv -f "$track_tmp" "$backup_dir/$filename"
         #mv -f "$uri_tmp" "$backup_dir_spotify/$filename"
@@ -247,7 +261,8 @@ else
     if [ -f "$playlist_metadata_snapshot_id_file" ] &&
        [ "$snapshot_id" = "$(cat "$playlist_metadata_snapshot_id_file")" ] &&
        [ -f "$backup_dir/$filename" ] &&
-       [ -f "$backup_dir_spotify/$filename" ]; then
+       [ -f "$backup_dir_spotify/$filename" ] &&
+       is_blank "${SPOTIFY_PLAYLIST_FORCE_DOWNLOAD:-}"; then
         echo -n ' => Snapshot ID unchanged'
     else
         # reset to the last good version to avoid having partial files which will offer bad commits of removed tracks
@@ -266,8 +281,8 @@ else
                ! is_local_uri "$uri" ; then
                 die "Invalid Spotify URI returned: '$uri', for track: $track"
             fi
-            echo "$track" >> "$track_tmp"
             echo "$uri" >> "$uri_tmp"
+            clean_trackname "$track" >> "$track_tmp"
         done
         mv -f "$track_tmp" "$backup_dir/$filename"
         mv -f "$uri_tmp" "$backup_dir_spotify/$filename"
