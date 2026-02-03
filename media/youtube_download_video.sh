@@ -20,6 +20,9 @@ srcdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1090,SC1091
 . "$srcdir/lib/utils.sh"
 
+# default to trying get the best video and audio format we can
+default_format="bestvideo[ext=mp4][vcodec^=avc1]+bestaudio/best[ext=mp4]"
+
 # shellcheck disable=SC2034,SC2154
 usage_description="
 Downloads a YouTube, Facebook or Twitter / X video to mp4 with maximum quality and compatibility using yt-dlp
@@ -29,6 +32,10 @@ Opens the video automatically for you to check the download
 Even resumes downloads after network interruptions or a Control-C and re-run the command later
 
 Installs yt-dlp (for downloading) and ffmpeg (for conversions) via OS package manager if not already installed
+
+Automatically tries to upgrade the yt-dlp and ffmpeg packages first as sites like YouTube update their site
+regularly breaking this and requiring a yt-dlp update - you should only install yt-dlp and ffmpeg using your OS
+package manager for this to work, otherwise you'll be having to upgrade yt-dlp often yourself manually
 
 If you run into a error determining a video format to download such as this:
 
@@ -42,7 +49,28 @@ Then set this in your shell first with the name of your browser:
 
     export COOKIES_FROM_BROWSER=chrome
 
-Try to upgrade yt-dlp first as sites like YouTube update their site breaking this and requiring a yt-dlp update
+You can specify the download format using args eg. --format, but you can also set this in environment variable used
+by this script:
+
+    export YT_DLP_FORMAT='best[height<=720]'
+
+This can make hundreds of MB of size difference vs 1080p or greater, reducing a long download wait time.
+
+Better would be to add the '[height<=720]' to the default format which is:
+
+    export YT_DLP_FORMAT='$default_format'
+
+        so it becomes:
+
+    export YT_DLP_FORMAT='bestvideo[ext=mp4][vcodec^=avc1][height<=720]+bestaudio/best[ext=mp4][height<=720]'
+
+Tip: set this in direnv to have smaller quicker downloads using less disk space by limiting to good enough 720p,
+especially for videos you're just going to quickly watch one time with the mpvd alias to delete the file after one
+watch, see this documentation:
+
+    https://github.com/HariSekhon/Knowledge-Base/blob/main/direnv.md
+
+    https://github.com/HariSekhon/Knowledge-Base/blob/main/mpv.md
 "
 
 # used by usage() in lib/utils.sh
@@ -61,20 +89,32 @@ shift || :
 
 output_filename="$file_basename_without_ext.%(ext)s"
 
-format="bestvideo[ext=mp4][vcodec^=avc1]+bestaudio/best[ext=mp4]"
+# override the format with direnv in your ~/Downloads or ~/Downloads/YouTube dir
+# dir if you want faster downloads at a good enough format:
+#
+#   eg. export YT_DLP_FORMAT='best[height=720]'
+#
+format="${YT_DLP_FORMAT:-$default_format}"
 
-#"$srcdir/../packages/install_packages_if_absent.sh" yt-dlp ffmpeg
+export HOMEBREW_NO_ENV_HINTS=1
 
-# in case installed manually but not in package manager
-for cmd in yt-dlp ffmpeg; do
-    if ! type -P "$cmd" &>/dev/null; then
-        timestamp "$cmd not found in \$PATH, attempting to install..."
-        echo
-        "$srcdir/../packages/install_packages.sh" "$cmd"
-        echo
-    fi
-    check_bin "$cmd"
-done
+# In case installed manually but not in package manager...
+#
+# Update: expect user to be using package manager so we can auto-upgrade yt-dlp which is needed often
+#
+#for cmd in yt-dlp ffmpeg; do
+#    if ! type -P "$cmd" &>/dev/null; then
+#        timestamp "$cmd not found in \$PATH, attempting to install..."
+#        echo
+#        "$srcdir/../packages/install_packages.sh" "$cmd"
+#        echo
+#    fi
+#    check_bin "$cmd"
+#done
+
+"$srcdir/../packages/install_packages_if_absent.sh" yt-dlp ffmpeg
+
+"$srcdir/../packages/upgrade_packages_if_outdated.sh" yt-dlp ffmpeg
 
 # https://github.com/yt-dlp/yt-dlp#output-template
 

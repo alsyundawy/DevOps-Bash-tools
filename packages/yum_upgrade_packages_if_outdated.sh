@@ -3,7 +3,7 @@
 #  vim:ts=4:sts=4:sw=4:et
 #
 #  Author: Hari Sekhon
-#  Date: 2020-08-23 18:32:06 +0100 (Sun, 23 Aug 2020)
+#  Date: 2026-02-03 00:01:41 -0300 (Tue, 03 Feb 2026)
 #
 #  https://github.com/HariSekhon/DevOps-Bash-tools
 #
@@ -27,7 +27,7 @@ srcdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # shellcheck disable=SC2034,SC2154
 usage_description="
-Installs Yum RPM package lists if the packages aren't already installed
+Upgrades Yum RPM package lists if the packages are outdated
 
 $package_args_description
 
@@ -44,7 +44,21 @@ help_usage "$@"
 rpm -q findutils &>/dev/null ||
 yum install -y findutils
 
+# quicker and simpler to just let yum/dnf determine that it's not already installed
+#
+# dnf outputs something like:
+#
+#   No match for argument: wget
+#   No match for argument: nonexistentpackage
+#
+# regardless of whether there is a potential package upsteam like wget, or not like nonexistentpackage
+#
+#upgradeable_packages="$(yum check-update)"
+
 process_package_args "$@" |
-"$srcdir/rpms_filter_not_installed.sh" |
-rpms_filter_not_provided |
-xargs --no-run-if-empty "$srcdir/yum_install_packages.sh"
+#while read -r package; do
+#    if echo "$upgradeable_packages" | grep -Eq "^$package(.|[[:space:]])"; then
+#        echo "$package"
+#    fi
+#done |
+xargs --no-run-if-empty yum upgrade -y

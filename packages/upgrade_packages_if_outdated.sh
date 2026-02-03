@@ -2,7 +2,7 @@
 #  vim:ts=4:sts=4:sw=4:et
 #
 #  Author: Hari Sekhon
-#  Date: 2020-08-23 17:28:41 +0100 (Sun, 23 Aug 2020)
+#  Date: 2026-02-02 22:22:43 -0300 (Mon, 02 Feb 2026)
 #
 #  https://github.com/HariSekhon/DevOps-Bash-tools
 #
@@ -16,7 +16,7 @@
 
 # Caveat: doesn't catch metapackages
 #
-# eg. vim on centos is resolved to vim-enhanced and doesn't match to prevent trying to install again
+# eg. vim on centos is resolved to vim-enhanced and doesn't match to prevent trying to upgrade again
 
 set -euo pipefail
 [ -n "${DEBUG:-}" ] && set -x
@@ -29,13 +29,13 @@ check_bin(){
 }
 
 if check_bin apk; then
-    "$srcdir/apk_install_packages_if_absent.sh" "${packages[@]}"
+    "$srcdir/apk_upgrade_packages_if_outdated.sh" "${packages[@]}"
 elif check_bin apt-get dpkg; then
-    "$srcdir/apt_install_packages_if_absent.sh" "${packages[@]}"
+    "$srcdir/apt_upgrade_packages_if_outdated.sh" "${packages[@]}"
 elif check_bin yum rpm; then
-    "$srcdir/yum_install_packages_if_absent.sh" "${packages[@]}"
+    "$srcdir/yum_upgrade_packages_if_outdated.sh" "${packages[@]}"
 elif check_bin brew; then
-    "$srcdir/brew_install_packages_if_absent.sh" "${packages[@]}"
+    "$srcdir/brew_upgrade_packages_if_outdated.sh" "${packages[@]}"
 else
     echo "Unsupported OS / Package Manager"
     exit 1

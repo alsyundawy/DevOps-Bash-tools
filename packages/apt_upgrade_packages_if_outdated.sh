@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
-# shellcheck disable=SC2230
 #  vim:ts=4:sts=4:sw=4:et
 #
 #  Author: Hari Sekhon
-#  Date: 2020-08-23 18:32:06 +0100 (Sun, 23 Aug 2020)
+#  Date: 2026-02-02 23:48:50 -0300 (Mon, 02 Feb 2026)
 #
 #  https://github.com/HariSekhon/DevOps-Bash-tools
 #
@@ -27,11 +26,13 @@ srcdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # shellcheck disable=SC2034,SC2154
 usage_description="
-Installs Yum RPM package lists if the packages aren't already installed
+Upgrades Debian / Ubuntu deb package lists if the packages are outdated
+
+Refuses to upgrade/install packages which aren't already installed
 
 $package_args_description
 
-Tested on CentOS
+Tested on Debian with apt
 "
 
 # used by usage() in lib/utils.sh
@@ -40,11 +41,17 @@ usage_args="<packages>"
 
 help_usage "$@"
 
-# get xargs if it's not installed since we call it below in the shell pipeline
-rpm -q findutils &>/dev/null ||
-yum install -y findutils
+export DEBIAN_FRONTEND=noninteractive
+
+apt update
+
+# unlike other distros, it's faster and easier to just run the upgrade on the packages and let apt figure it out
+#upgradeable_packages="$(apt list --upgradable)"
 
 process_package_args "$@" |
-"$srcdir/rpms_filter_not_installed.sh" |
-rpms_filter_not_provided |
-xargs --no-run-if-empty "$srcdir/yum_install_packages.sh"
+#while read -r package; do
+#    if echo "$upgradeable_packages" | grep -Eq "^$package(/|[[:space:]])"; then
+#        echo "$package"
+#    fi
+#done |
+xargs --no-run-if-empty apt install --only-upgrade -y
