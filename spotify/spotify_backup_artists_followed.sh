@@ -2,7 +2,7 @@
 #  vim:ts=4:sts=4:sw=4:et
 #
 #  Author: Hari Sekhon
-#  Date: 2020-07-02 19:11:12 +0100 (Thu, 02 Jul 2020)
+#  Date: 2020-11-07 00:30:25 +0000 (Sat, 07 Nov 2020)
 #
 #  https://github.com/HariSekhon/DevOps-Bash-tools
 #
@@ -23,9 +23,7 @@ srcdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # shellcheck disable=SC2034,SC2154
 usage_description="
-Downloads the list of Spotify playlists
-
-$usage_playlist_help
+Downloads the list of Spotify artists followed
 
 $usage_auth_help
 "
@@ -44,24 +42,19 @@ if is_blank "${SPOTIFY_BACKUP_DIR:-}"; then
     fi
 fi
 
+export SPOTIFY_PRIVATE=1
+
 spotify_token
 
 SECONDS=0
 
 mkdir -pv "$SPOTIFY_BACKUP_DIR/spotify"
 
-timestamp "Dumping list of Spotify playlists to $SPOTIFY_BACKUP_DIR/.spotify_metadata/playlists.txt"
+timestamp "Backing up Spotify artists followed to: $SPOTIFY_BACKUP_DIR/spotify/artists_followed.txt"
 tmp="$(mktemp)"
-SPOTIFY_PLAYLIST_SNAPSHOT_ID=1 "$srcdir/spotify_playlists.sh" > "$tmp"
-mv -f "$tmp" "$SPOTIFY_BACKUP_DIR/.spotify_metadata/playlists.txt"
+"$srcdir/spotify_artists_followed_uri_name.sh" | sort -k2 -f > "$tmp"
+mv -f "$tmp" "$SPOTIFY_BACKUP_DIR/spotify/artists_followed.txt"
 
-timestamp "Stripping spotify playlist Snapshot IDs from $SPOTIFY_BACKUP_DIR/.spotify_metadata/playlists.txt => $SPOTIFY_BACKUP_DIR/spotify/playlists.txt"
-awk '{$2=""; print}' "$SPOTIFY_BACKUP_DIR/.spotify_metadata/playlists.txt" |
-sed 's/  / /' > "$SPOTIFY_BACKUP_DIR/spotify/playlists.txt"
-
-timestamp "Stripping spotify playlist IDs from $SPOTIFY_BACKUP_DIR/spotify/playlists.txt => $SPOTIFY_BACKUP_DIR/playlists.txt"
-tmp="$(mktemp)"
-sed 's/^[^[:space:]]*[[:space:]]*//' "$SPOTIFY_BACKUP_DIR/spotify/playlists.txt" > "$tmp"
-mv -f "$tmp" "$SPOTIFY_BACKUP_DIR/playlists.txt"
-
-timestamp "Spotify playlists list downloaded"
+timestamp "Stripping Spotify artists followed URIs to create: $SPOTIFY_BACKUP_DIR/artists_followed.txt"
+awk '{$1=""; print}' "$SPOTIFY_BACKUP_DIR/spotify/artists_followed.txt" |
+sed 's/^[[:space:]]//' > "$SPOTIFY_BACKUP_DIR/artists_followed.txt"

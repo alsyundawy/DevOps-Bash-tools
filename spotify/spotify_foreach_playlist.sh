@@ -60,23 +60,34 @@ shift || :
 
 spotify_token
 
+# trigger spotify_playlists.sh to return an extra middle column with the snapshot ID
+# which we pass to spotify_backup_playlist.sh to avoid re-downloading many playlists
+export SPOTIFY_PLAYLIST_SNAPSHOT_ID=1
+
 playlists="$("$srcdir/spotify_playlists.sh" "$@")"
 
 total_playlists="$(grep -c . <<< "$playlists")"
 
 i=0
 
-while read -r playlist_id playlist; do
+while read -r playlist_id snapshot_id playlist; do
     (( i += 1 ))
     if is_blank "${SPOTIFY_FOREACH_NO_PRINT_PLAYLIST_NAME:-}"; then
         printf '%s/%s  %s\t' "$i" "$total_playlists" "$playlist"
+    fi
+    if ! is_spotify_playlist_snapshot_id "$snapshot_id"; then
+        die "ERROR: invalid Spotify snapshot_id '$snapshot_id' detected for playlist: $playlist"
     fi
     # handle danger - done at playlist level not command level because we need late command evaluation in spotify_backup_playlists.sh
     # this works, tested on Ke$ha playlist and `echo injected`
     playlist="${playlist//$/\\$}"
     playlist="${playlist//\`/}"
+    playlist="${playlist//\\"/\\\\"}"
+    # shellcheck disable=SC1003
+    playlist="${playlist//'/\\'}"
     cmd="${command_template//\{playlist_id\}/$playlist_id}"
     cmd="${cmd//\{playlist\}/$playlist}"
+    cmd="${cmd//\{snapshot_id\}/$snapshot_id}"
     eval "$cmd"
     if is_blank "${SPOTIFY_FOREACH_NO_NEWLINE:-}"; then
         printf '\n'

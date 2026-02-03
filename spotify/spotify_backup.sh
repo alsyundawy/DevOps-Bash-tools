@@ -53,6 +53,8 @@ spotify_token
 
 SECONDS=0
 
+mkdir -pv "$SPOTIFY_BACKUP_DIR/spotify"
+
 if [ $# -gt 0 ]; then
     timestamp "Backing up selected playlist(s):"
     echo
@@ -63,14 +65,13 @@ if [ $# -gt 0 ]; then
     exit 0
 fi
 
-mkdir -pv "$SPOTIFY_BACKUP_DIR/spotify"
+"$srcdir/spotify_backup_artists_followed.sh"
+echo >&2
 
 "$srcdir/spotify_backup_playlists_list.sh"
-
 echo >&2
 
 "$srcdir/spotify_backup_playlists.sh"
-
 echo >&2
 
 timestamp "Spotify Backup completed in $SECONDS seconds"

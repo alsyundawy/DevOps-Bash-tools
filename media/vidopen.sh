@@ -52,9 +52,9 @@ video="$1"
 
 # Will be tried in this order
 linux_commands=(
+    mpv
     mplayer
     vlc
-    mpv
     ffplay
     totem
     xine
@@ -66,12 +66,21 @@ if is_mac; then
     if [ -n "${BACKGROUND_VIDEO:-}" ]; then
         opts+=(-g)
     fi
-    if [ -n "${DEFAULT_VIDEO_PLAYER:-}" ]; then
-        opts+=(-a "$DEFAULT_VIDEO_PLAYER")
-    fi
-    open "${opts[@]}" "$video"
-    if [ -n "${PLAY_VIDEO:-}" ]; then
-        osascript -e "tell application \"${DEFAULT_VIDEO_PLAYER:-QuickTime Player}\" to play document 1"
+    if type -P "${DEFAULT_VIDEO_PLAYER-}" &>/dev/null; then
+        if [ "$DEFAULT_VIDEO_PLAYER" = mpv ]; then
+            if [ -n "${PLAY_VIDEO:-}" ]; then
+                opts=("--pause=yes")
+            fi
+        fi
+        "$DEFAULT_VIDEO_PLAYER" "${opts[@]}" "$video" ${BACKGROUND_VIDEO:+&}
+    else
+        if [ -n "${DEFAULT_VIDEO_PLAYER:-}" ]; then
+            opts+=(-a "$DEFAULT_VIDEO_PLAYER")
+        fi
+        open "${opts[@]}" "$video"
+        if [ -n "${PLAY_VIDEO:-}" ]; then
+            osascript -e "tell application \"${DEFAULT_VIDEO_PLAYER:-QuickTime Player}\" to play document 1"
+        fi
     fi
 else  # assume Linux
     found=0
