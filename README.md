@@ -1574,7 +1574,8 @@ See also [Knowledge Base notes for MultiMedia](https://github.com/HariSekhon/Kno
 - `spotify_backup_artists_followed.sh` - backs up the list of artists followed to Spotify URI and Names
 - `spotify_search*.sh` - searches Spotify's library for tracks / albums / artists getting results in human readable format, JSON, or URI formats for easy loading to Spotify playlists
 - `spotify_release_year.sh` - searches for a given track or album and finds the original release year
-- `spotify_uri_to_name.sh` - converts Spotify track / album / artist URIs to human readable `Artist - Track` / CSV format. Takes Spotify URIs, URL links or just IDs. Reads URIs from files or standard input
+- `spotify_uri_json.sh` - takes a Spotify URI and dumps its JSON for inspection. You can pass one of the following formats: `spotify:<type>:<alphanumeric_ID>`, `http://open.spotify.com/<type>/<alphanumeric_ID>`, `<alphanumeric_ID>`
+- `spotify_uri_to_name.sh` - converts Spotify track / album / artist URIs to human readable `Artist - Track` or CSV format. Takes Spotify URIs, URL links or just IDs similar to `spotify_uri_json.sh` above. Reads URIs from files or standard input
 - `spotify_create_playlist.sh` - creates a Spotify playlist, either public or private
 - `spotify_rename_playlist.sh` - renames a Spotify playlist
 - `spotify_set_playlists_public.sh` / `spotify_set_playlists_private.sh` - sets one or more given Spotify playlists to public / private
@@ -1589,6 +1590,7 @@ See also [Knowledge Base notes for MultiMedia](https://github.com/HariSekhon/Kno
 - `spotify_delete_any_duplicates_in_playlist.sh` - calls both of the above scripts to first get rid of duplicate URIs and then remove any other duplicates by track name matches
 - `spotify_playlist_tracks_uri_in_year.sh` - finds track URIs in a playlist where their original release date is in a given year or decade (by regex match). This has to do a secondary Spotify track search lookup by name and relies on `normalize_tracknames.pl` from [HariSekhon/Spotify-tools](https://github.com/HariSekhon/Spotify-tools) being built and in the `$PATH`
 - `spotify_playlist_tracks_uri_by_year.sh` -  returns track URIs from the given Spotify playlist for a specific year or range of years. Useful for filtering tracks to add to my best of each decade playlists. More efficient than `spotify_playlist_tracks_uri_in_year.sh`, without dependency on [HariSekhon/Spotify-tools](https://github.com/HariSekhon/Spotify-tools), but it only uses the year of the track version, which if an album track may not be the same year if it was first released as a single earlier
+- `spotify_playlist_tracks_uri_batch_by_year.sh` - Returns all track URIs from the given Spotify playlist grouped by year or decade. Copies each batch to the clipboard, prints to stdout, and prompts to continue before printing the next batch. Useful for filtering tracks to add to my best of each year or decade playlists
 - `spotify_playlist_uri_offset.sh` - finds the offset of a given track URI in a given playlist, useful to find positions to resume processing a large playlist
 - `spotify_top_artists*.sh` - lists your top artists in URI or human readable format
 - `spotify_top_tracks*.sh` - lists top tracks in URI or human readable format

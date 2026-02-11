@@ -91,17 +91,110 @@ fi
 # messes up output per line when iterating all playlists via spotify_backup_playlists.sh
 #log "Backing up to directory: $backup_dir"
 
-backup_dir_spotify="$backup_dir/spotify"
+backup_dir_base="$backup_dir"
+backup_dir_spotify_base="$backup_dir/spotify"
 backup_dir_metadata="$backup_dir/.spotify_metadata"
 unchanged_playlist=0
+
+mkdir -vp "$backup_dir_base"
+mkdir -vp "$backup_dir_spotify_base"
+mkdir -vp "$backup_dir_metadata"
+
+# load mappings once
+load_path_mappings(){
+    local base_dir="$1"
+    local mappings_file="$backup_dir_base/.path_mappings.txt"
+
+    # can't make this an associative array because we want to support multiple rules per dir path
+    dirs=()
+    regexes=()
+
+    [ -f "$mappings_file" ] || return 0
+
+    while IFS= read -r line; do
+        line="${line%%#*}"
+        line="$(sed 's/^[[:space:]]*//;s/[[:space:]]*$//' <<< "$line")"
+        [ -z "$line" ] && continue
+
+        # if file is split by tabs, prefer this
+        if [[ "$line" == *$'\t'* ]]; then
+            dir="${line%%$'\t'*}"
+            regex="${line#*$'\t'}"
+            dir="$(trim "$dir")"
+            regex="$(trim "$regex")"
+        # but fall back to parsing multiple spaces as field separator between dir and regex
+        else
+            dir="$(sed -E 's/[[:space:]]{2,}.*//' <<< "$line")"
+            regex="$(sed -E 's/^.*[[:space:]]{2,}//' <<< "$line")"
+        fi
+        # dir should always be populated as it comes first
+        [ -z "$dir" ] && continue
+        [ -z "$regex" ] && continue
+
+        dirs+=("$dir")
+        regexes+=("$regex")
+    done < "$mappings_file"
+}
+
+get_path_mapping_subdir(){
+    local base_dir="$1"
+    local playlist_name="$2"
+    local debug_mappings="${DEBUG_MAPPINGS:-}"
+
+    if [ -z "${path_map_dirs_loaded:-}" ]; then
+        load_path_mappings "$base_dir"
+        path_map_dirs_loaded=1
+    fi
+
+    local i
+
+    # try exact match first as it's faster than regex and allows us just use simpler literal lines
+    for (( i=0; i < ${#regexes[@]} ; i++ )); do
+        if [ "$playlist_name" = "${regexes[$i]}" ]; then
+            if [ -n "$debug_mappings" ]; then
+                echo "literal match: [${regexes[$i]}]" >&2
+                echo "playlist:      [$playlist]"      >&2
+                echo "dir:           [${dirs[$i]}]"    >&2
+                echo
+            fi
+            echo "${dirs[$i]}"
+            return 0
+        fi
+    done
+
+    # regex fallback
+    for (( i=0; i  <${#regexes[@]} ; i++ )); do
+        if [[ "$playlist_name" =~ ${regexes[$i]} ]]; then
+            if [ -n "$debug_mappings" ]; then
+                echo "regex:    [${regexes[$i]}]" >&2
+                echo "playlist: [$playlist]"      >&2
+                echo "dir:      [${dirs[$i]}]"    >&2
+                echo
+            fi
+            echo "${dirs[$i]}"
+            return 0
+        fi
+    done
+}
+export -f get_path_mapping_subdir
+
+apply_path_mapping(){
+    local playlist_name="$1"
+    path_mapping_subdir="$(get_path_mapping_subdir "$backup_dir_base" "$playlist_name")"
+    if [ -n "$path_mapping_subdir" ]; then
+        backup_dir="$backup_dir_base/$path_mapping_subdir"
+        backup_dir_spotify="$backup_dir_base/spotify/$path_mapping_subdir"
+    else
+        backup_dir="$backup_dir_base"
+        backup_dir_spotify="$backup_dir_spotify_base"
+    fi
+    mkdir -vp "$backup_dir"
+    mkdir -vp "$backup_dir_spotify"
+}
 
 if liked; then
     playlist_name="Liked Songs"
 fi
-
-mkdir -vp "$backup_dir"
-mkdir -vp "$backup_dir_spotify"
-mkdir -vp "$backup_dir_metadata"
 
 if liked; then
     export SPOTIFY_PRIVATE=1
@@ -157,9 +250,10 @@ if liked; then
     echo -n "$playlist_name "
 
     filename="$("$srcdir/spotify_playlist_to_filename.sh" <<< "$playlist_name")"
+    apply_path_mapping "$playlist_name"
 
     # Caching behaviour
-    # If we pass the second arg snapshot ID just use that to save an API call
+    # if we pass the second arg snapshot ID just use that to save an API call
     if ! is_blank "$snapshot_id"; then
         liked_added_at="$snapshot_id"
     else
@@ -232,6 +326,7 @@ else
     echo -n "$playlist_name"
 
     filename="$("$srcdir/spotify_playlist_to_filename.sh" <<< "$playlist_name")"
+    apply_path_mapping "$playlist_name"
 
     # XXX: bugfix for 'illegal byte sequence error' for weird unicode chars in the filename
     #filename="$(sed 's/[^[:alnum:][:space:]!"$&'"'"'()+,.\/:<_|–\∕-]/-/g' <<< "$filename")"
@@ -335,42 +430,40 @@ else
         #mv -f "$tmp" "$backup_dir/$filename"
         echo -n 'OK'
 
-        old_filename="$(if [ -f "$playlist_metadata_filename_file" ]; then cat "$playlist_metadata_filename_file"; fi)"
+        old_filename="$(
+            if [ -f "$playlist_metadata_filename_file" ]; then
+                cat "$playlist_metadata_filename_file"
+            fi
+        )"
 
         if not_blank "$old_filename" &&
            [ "$backup_dir/$filename" != "$backup_dir/$old_filename" ]; then
 
             echo -n " => playlist RENAMED"
 
-            cd "$backup_dir"
+            # with path mapping, renames are under base: Subdir/ and spotify/Subdir/; run from backup base
+            if [ -n "${path_mapping_subdir:-}" ]; then
+                cd "$backup_dir_base"
+            else
+                cd "$backup_dir"
+            fi
 
-            # If we're in a git repo and the old filename is git managed, then rename it
+            # if we're in a git repo and the old filename is git managed, then rename it
             #
-            # Optionally using a local rename.sh script if present - useful script hook which could have
+            # optionally using a local rename.sh script if present - useful script hook which could have
             # some more specific handling of corresponding files under management - *.description, spotify/ or
             # .spotify/metadata/ files
             #
-            # In my case this just calls spotify_rename_playlist_files.sh in this repo so it's the same, but a
+            # in my case this just calls spotify_rename_playlist_files.sh in this repo so it's the same, but a
             # potentially useful hook script to leave in, and the rename.sh abstraction is simpler
             if is_in_git_repo &&
                is_file_tracked_in_git "$old_filename"; then
                 echo -n " => updating files... "
                 if [ -x ./rename.sh ]; then
-                    ./rename.sh "$old_filename" "$filename"
+                    ./rename.sh "$old_filename" "$filename" ${path_mapping_subdir:+$path_mapping_subdir}
                 else
-                    "$srcdir/../scripts/spotify_rename_playlist_files.sh" "$old_filename" "$filename"
+                    "$srcdir/../scripts/spotify_rename_playlist_files.sh" "$old_filename" "$filename" ${path_mapping_subdir:+$path_mapping_subdir}
                 fi
-            fi
-
-            if [ -f "core_playlists.txt" ]; then
-                #echo -n " => updating core_playlists.txt"
-                tmp="$(mktemp)"
-                awk -v id="$playlist_id" -v name="$playlist_name" '
-                    # replace the rest of line (the playlist name) if the first column (the playlist ID) matches
-                    $1 == id { $0 = $1 " " name }
-                    { print }
-                ' core_playlists.txt > "$tmp"
-                mv "$tmp" core_playlists.txt
             fi
 
             cd -
