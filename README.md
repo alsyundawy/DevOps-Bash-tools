@@ -358,6 +358,8 @@ Top-level `.bashrc` and `.bash.d/` directory:
 - `random_select.sh` - selects one of given args at random. Useful for sampling, running randomized subsets of large test suites etc.
 - `random_number.sh` - prints a random integer between two integer arguments (inclusive)
 - `random_string.sh` - prints a random alphanumeric string of a given length
+- `screen_terminal_to_stdout.sh` - dumps the GNU Screen terminal output to stdout
+- `screen_terminal_to_clipboard.sh` - dumps the GNU Screen terminal output to a temp file and copies to clipboard for sharing & debugging purposes
 - `shields_embed_logo.sh` - base64 encodes a given icon file or url and prints the `logo=...` url parameter you need to add the [shields.io](https://shields.io/) badge url
 - `shorten_text_selection.sh` - shortens the selected text in the prior window. Replaces `and` with `&` and crushes out multiple blank lines. I use this for LinkedIn comments due to the short 1250 character limit
 - `shred_file.sh` - overwrites a file 7 times to DoD standards before deleting it to prevent recovery of sensitive information
@@ -1142,6 +1144,7 @@ Maintain your Git `README.md` and similar Markdown documentation well.
   - `markdown_octocat_github_links.sh` - converts GitHub links like
     `<https://github.com/HariSekhon/Knowledge-Base>` to shorthand links with an OctoCat emoji and without the redundant `https://github.com/` prefix such as
     [:octocat: HariSekhon/Knowledge-Base](https://github.com/HariSekhon/Knowledge-Base)
+  - `markdown_replace_links_with_jsdelivr.sh` - replaces local GitHub repo file links in the given markdown file(s) with JSDelivr CDN links
 
 ### CI/CD - Continuous Integration / Continuous Deployment
 
@@ -1585,12 +1588,12 @@ See also [Knowledge Base notes for MultiMedia](https://github.com/HariSekhon/Kno
 - `spotify_delete_from_playlist_if_track_in_other_playlists.sh` - deletes tracks from a given playlist if their 'Artist - Track' name match are found in the subsequently given playlists (less accurate than exact URI deletion above)
 - `spotify_duplicate_uri_in_playlist.sh` - finds duplicate Spotify URIs in a given playlist (these are guaranteed exact duplicate matches), returns all but the first occurrence and optionally their track positions (zero-indexed to align with the Spotify API for easy chaining with other tools)
 - `spotify_duplicate_tracks_in_playlist.sh` - finds duplicate Spotify tracks in a given playlist (these are idential `Artist - Track` name matches, which may be from different albums / singles)
-- `spotify_delete_duplicates_in_playlist.sh` - deletes duplicate Spotify URI tracks (identical) in a given playlist using `spotify_duplicate_uri_in_playlist.sh` and `spotify_delete_from_playlist.sh`
 - `spotify_delete_duplicate_tracks_in_playlist.sh` - deletes duplicate Spotify tracks (name matched) in a given playlist using `spotify_duplicate_tracks_in_playlist.sh` and `spotify_delete_from_playlist.sh`
+- `spotify_delete_duplicate_track_uris_in_playlist.sh` - deletes duplicate Spotify URI tracks (identical) in a given playlist using `spotify_duplicate_uri_in_playlist.sh` and `spotify_delete_from_playlist.sh`
 - `spotify_delete_any_duplicates_in_playlist.sh` - calls both of the above scripts to first get rid of duplicate URIs and then remove any other duplicates by track name matches
 - `spotify_playlist_tracks_uri_in_year.sh` - finds track URIs in a playlist where their original release date is in a given year or decade (by regex match). This has to do a secondary Spotify track search lookup by name and relies on `normalize_tracknames.pl` from [HariSekhon/Spotify-tools](https://github.com/HariSekhon/Spotify-tools) being built and in the `$PATH`
 - `spotify_playlist_tracks_uri_by_year.sh` -  returns track URIs from the given Spotify playlist for a specific year or range of years. Useful for filtering tracks to add to my best of each decade playlists. More efficient than `spotify_playlist_tracks_uri_in_year.sh`, without dependency on [HariSekhon/Spotify-tools](https://github.com/HariSekhon/Spotify-tools), but it only uses the year of the track version, which if an album track may not be the same year if it was first released as a single earlier
-- `spotify_playlist_tracks_uri_batch_by_year.sh` - Returns all track URIs from the given Spotify playlist grouped by year or decade. Copies each batch to the clipboard, prints to stdout, and prompts to continue before printing the next batch. Useful for filtering tracks to add to my best of each year or decade playlists
+- `spotify_playlist_tracks_uri_batch_by_year.sh` - Returns all track URIs from the given Spotify playlist(s) grouped by year or decade. Copies each batch to the clipboard, prints to stdout, and prompts to continue before printing the next batch. Useful for filtering tracks to add to my best of each year or decade playlists
 - `spotify_playlist_uri_offset.sh` - finds the offset of a given track URI in a given playlist, useful to find positions to resume processing a large playlist
 - `spotify_top_artists*.sh` - lists your top artists in URI or human readable format
 - `spotify_top_tracks*.sh` - lists top tracks in URI or human readable format
