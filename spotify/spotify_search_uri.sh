@@ -10,7 +10,8 @@
 #
 #  License: see accompanying Hari Sekhon LICENSE file
 #
-#  If you're using my code you're welcome to connect with me on LinkedIn and optionally send me feedback to help steer this or other code I publish
+#  If you're using my code you're welcome to connect with me on LinkedIn
+#  and optionally send me feedback to help steer this or other code I publish
 #
 #  https://www.linkedin.com/in/HariSekhon
 #
@@ -30,16 +31,14 @@ Searches the Spotify API and returns the Spotify URIs for the first N tracks / a
 
 See this page for documentation on how to write query expressions:
 
-https://developer.spotify.com/documentation/web-api/reference/search/search/
+    https://developer.spotify.com/documentation/web-api/reference/search
 
 Example:
 
 ./${0##*/} artist:foo fighters track:arlandria
 
 
-Uses spotify_search_json.sh which supports the following environment variable options:
-
-Environment variable options:
+Uses the adjacent script spotify_search_json.sh which supports the following environment variable options:
 
 \$SPOTIFY_SEARCH_TYPE  = track # default
                         artist

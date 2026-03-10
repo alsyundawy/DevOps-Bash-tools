@@ -54,7 +54,15 @@ or if \$SPOTIFY_CSV environment variable is set then:
 \"Artist\",\"Album\"
 \"Artist\"
 
-Useful for saving Spotify playlists in a format that is easier to understand, revision control changes or export to other music systems
+Useful for saving Spotify playlists in a format that is easier to understand, revision control changes or export to
+other music systems
+
+or if \$SPOTIFY_TSV environment variable is set then:
+
+Artist \\t Track
+
+Useful for post-processing in scripts like spotify_search_alternate_track_uris.sh that want to be sure which was the
+artist and which was the track component
 
 The first argument that doesn't correspond to a file and all subsequent arguements are fed as-is to curl as options
 
@@ -64,7 +72,7 @@ $usage_auth_help
 
 # used by usage() in lib/utils.sh
 # shellcheck disable=SC2034
-usage_args="[<files>] [<curl_options>]"
+usage_args="[<uri_or_files>] [<curl_options>]"
 
 help_usage "$@"
 
@@ -269,7 +277,11 @@ output(){
 export -f output
 
 clean_output(){
-    tr '\t' ' ' |
+    if [ -n "${SPOTIFY_TSV:-}" ]; then
+        sed $'s/\t-\t/\t/'
+    else
+        tr '\t' ' '
+    fi |
     sed '
         s/^[[:space:]]*-//;
         s/^[[:space:]]*//;
@@ -278,15 +290,23 @@ clean_output(){
 }
 
 files=()
+tmp="$(mktemp)"
 
 for filename in "$@"; do
     if [ -f "$filename" ]; then
         files+=("$filename")
         shift || :
+    elif [[ "$filename" =~ ^spotify: ]]; then
+        echo "$filename" >> "$tmp"
+        shift || :
     else
         break
     fi
 done
+
+if [ -s "$tmp" ]; then
+    files+=("$tmp")
+fi
 
 if [ $# -gt 0 ]; then
     curl_options=("$@")

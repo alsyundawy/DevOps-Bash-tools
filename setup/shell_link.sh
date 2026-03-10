@@ -8,7 +8,8 @@
 #
 #  License: see accompanying Hari Sekhon LICENSE file
 #
-#  If you're using my code you're welcome to connect with me on LinkedIn and optionally send me feedback to help steer this or other code I publish
+#  If you're using my code you're welcome to connect with me on LinkedIn
+#  and optionally send me feedback to help steer this or other code I publish
 #
 #  https://www.linkedin.com/in/HariSekhon
 #
@@ -21,15 +22,24 @@ srcdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 bash_tools="$srcdir/.."
 
-conf_files="$(sed 's/#.*//; /^[[:space:]]*$/d' "$bash_tools/setup/files.txt")"
+conf_files=()
+while IFS= read -r line; do
+    conf_files+=("$line")
+done < <(
+    "$srcdir/../bin/decomment.sh" "$bash_tools/setup/files.txt"
+)
+
+# unreliable that HOME is set, ensure shell evaluates to the right thing before we use it
+#[ -n "${HOME:-}" ] || HOME=~
+HOME="${HOME:-$(cd && pwd)}"
 
 setup_file(){
     local filename="$1"
-    if grep -Eq "^[[:space:]]*(source|\\.)[[:space:]]+$bash_tools/$filename" ~/"$filename" 2>/dev/null; then
-        echo "$filename already sourced in ~/$filename"
+    if grep -Eq "^[[:space:]]*(source|\\.)[[:space:]]+$bash_tools/$filename" "$HOME/$filename" 2>/dev/null; then
+        echo "$filename already sourced in $HOME/$filename"
     else
         echo "injecting into ~/$filename: source $bash_tools/$filename"
-        echo "source $bash_tools/$filename" >> ~/"$filename"
+        echo "source $bash_tools/$filename" >> "$HOME/$filename"
     fi
 }
 
@@ -43,11 +53,8 @@ setup_file .zshenv
 setup_file .zlogin
 setup_file .zlogout
 
-# unreliable that HOME is set, ensure shell evaluates to the right thing before we use it
-[ -n "${HOME:-}" ] || HOME=~
-
 echo
-echo "symlinking dot files to \$HOME directory: $HOME"
+echo "Symlinking dot files to \$HOME directory: $HOME"
 echo
 
 opts=""
@@ -55,38 +62,98 @@ if [ -n "${FORCE:-}" ]; then
     opts="-f"
 fi
 
-HOME="${HOME:-$(cd && pwd)}"
+fix_link(){
+    local path="$1"
+    local target="$2"
 
-for filename in $conf_files; do
-    if [[ "$filename" =~ / ]]; then
-        srcdir="${filename%/*}"
+    if [ -L "$path" ]; then
+        local current
+        current="$(readlink "$path")"
+
+        if [ ! -e "$path" ] || [ "$current" != "$target" ]; then
+            echo "WARNING: Removing stale symlink: $path"
+            rm -f -- "$path"
+        fi
+    fi
+}
+
+#find_file(){
+#    local filename="$1"
+#    if [ -e "$filename" ]; then
+#        echo "$filename"
+#    else
+#        root_filename="$bash_tools/$filename"
+#        if [ -e "$root_filename" ]; then
+#            echo "$root_filename"
+#        else
+#            echo "ERROR: cannot find source for $filename" >&2
+#            exit 1
+#        fi
+#    fi
+#}
+
+if uname -s | grep -q Darwin; then
+    readlink(){
+        command greadlink "$@"
+    }
+    export -f readlink
+fi
+
+symlink(){
+    local path="$1"
+    if [[ "$path" =~ / ]]; then
+        filename="${path##*/}"
+        srcdir="${path%/*}"
         destdir="${srcdir#configs}"
         destdir="${destdir##/}"
         destdir="${destdir%%/}"
-        filename="${filename##*/}"
-        sourcepath="$PWD${srcdir+/$srcdir}/$filename"  # if dirname, insert /dirname in middle
-        destpath="$HOME${destdir+/"$destdir"/}"        # if dirname, append /dirname to dest
+        sourcepath="$bash_tools${srcdir+/$srcdir}/$filename"  # if dirname, insert /dirname in middle
+        destpath="$HOME${destdir+/"$destdir"/}"               # if dirname, append /dirname to dest
+        # remove double slashes to clean the path
         sourcepath="${sourcepath/\/\//\/}"
         destpath="${destpath/\/\//\/}"
+        destpath="${destpath%%/}"
         mkdir -pv "$destpath"
+        sourcepath="$(readlink -f "$sourcepath")"
+        fix_link "$destpath/$filename" "$sourcepath"
         # want opt expansion
         # shellcheck disable=SC2086
         ln -sv $opts -- "$sourcepath" "$destpath" || :
     else
+        fix_link "$HOME/$filename" "$bash_tools/$filename"
         # want opt expansion
         # shellcheck disable=SC2086
-        ln -sv $opts -- "$PWD/$filename" ~ || continue
+        ln -sv $opts -- "$bash_tools/$filename" "$HOME/" || :
         # if we link .vimrc then run the vundle install and get plugins to prevent vim errors every startup
         if [ "$filename" = .vimrc ]; then
             "$srcdir/../install/install_vundle.sh" || :
         fi
     fi
-done
+}
 
+ for filename in "${conf_files[@]}"; do
+     if [[ "$filename" =~ \* ]]; then
+         for expanded_filename in "$bash_tools"/$filename; do
+            if [[ "$expanded_filename" =~ \* ]]; then
+                echo "ERROR: failed to expand glob: $bash_tools/$filename"
+                exit 1
+            fi
+            # shellcheck disable=SC2295
+            expanded_filename="${expanded_filename#$bash_tools/}"
+            symlink "$expanded_filename"
+         done
+     else
+         symlink "$filename"
+     fi
+ done
+
+fix_link "$HOME/.gitignore_global" "$bash_tools/.gitignore"
 # want opt expansion
 # shellcheck disable=SC2086
-ln -sv $opts -- ~/.gitignore ~/.gitignore_global || :
+ln -sv $opts -- "$bash_tools/.gitignore" "$HOME/.gitignore_global" || :
 
-if [[ "${USER:-}" =~ harisekhon|hsekhon ]]; then
-    ln -sv -- "$PWD/.gitconfig.local" ~ || :
+# drop my personal Git username and email local file in this repo into home dir
+if [[ "${USER:-}" =~ ^hari$|harisekhon|hsekhon ]]; then
+    fix_link "$HOME/.gitconfig.local" "$bash_tools/.gitconfig.local"
+    ln -sv -- "$bash_tools/.gitconfig.local" "$HOME/" || :
 fi

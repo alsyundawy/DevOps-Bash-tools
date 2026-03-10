@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #  vim:ts=4:sts=4:sw=4:et
 #
-#  args: "Foo Fighers"
+#  args: "Foo Fighters"
 #
 #  Author: Hari Sekhon
 #  Date: 2020-07-05 14:33:55 +0100 (Sun, 05 Jul 2020)
@@ -10,7 +10,8 @@
 #
 #  License: see accompanying Hari Sekhon LICENSE file
 #
-#  If you're using my code you're welcome to connect with me on LinkedIn and optionally send me feedback to help steer this or other code I publish
+#  If you're using my code you're welcome to connect with me on LinkedIn
+#  and optionally send me feedback to help steer this or other code I publish
 #
 #  https://www.linkedin.com/in/HariSekhon
 #
@@ -30,7 +31,7 @@ Searches the Spotify API and returns the first N tracks / artists / albums that 
 
 See this page for documentation on how to write query expressions:
 
-https://developer.spotify.com/documentation/web-api/reference/search/search/
+    https://developer.spotify.com/documentation/web-api/reference/search/search/
 
 Examples:
 
@@ -38,13 +39,16 @@ Find tracks called 'arlandria' by artist 'foo fighters':
 
     ${0##*/} artist:foo fighters track:arlandria
 
-
 Find top 5 matching artists with 'foo' in the name:
 
     SPOTIFY_SEARCH_TYPE=artist SPOTIFY_SEARCH_LIMIT=5 ${0##*/} foo
 
 
-Environment variable options:
+Non-ASCII characters will cause the Spotify API to break with HTTP 400 errors - you must URL encode them first
+eg. the artist Sébastien Tellier. You can use the ../bin/urlencode.sh script on the term first
+
+
+Uses the adjacent script spotify_search_json.sh which supports the following environment variable options:
 
 \$SPOTIFY_SEARCH_TYPE  = track # default
                         artist
@@ -53,9 +57,6 @@ Environment variable options:
 \$SPOTIFY_SEARCH_LIMIT = 1 # default
 
 \$SPOTIFY_SEARCH_OFFSET = 0 # default
-
-
-Uses spotify_search_json.sh - see there for more searching defails.
 
 
 $usage_auth_help

@@ -23,7 +23,22 @@ srcdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # shellcheck disable=SC2034,SC2154
 usage_description="
-Checks the internet is up before returning
+Checks the internet is available by multiple tests
+
+Waits for the internet to become available before returning
+
+Useful to run in a blocking latch wait fashion in scripts to ensure the internet is available
+before running a big operation like my Spotify Playlists API backups
+
+Tests:
+
+- Local Gateway IP is configured (Wifi DHCP has succeeded or we have static details configured)
+- Gateway IP is reachable (ping)
+  - now optional informational, progresses regardless now as some hotel wifi gateway did not return pings
+  even though the end-to-end internet connection was up (router was obviously just set to not respond to ICMP)
+- Public IP is reachable (ping to known major public IP 1.1.1.1)
+- DNS resolution is working (resolves google.com)
+- Public Domain is reachable (ping to google.com)
 "
 
 # used by usage() in lib/utils.sh
@@ -57,7 +72,7 @@ check_gateway() {
     if ping -c "$ping_count" -W "$ping_timeout" "$gateway_ip" &>/dev/null; then
         timestamp "OK: Gateway IP reachable"
     else
-        timestamp "FAIL: Gateway IP '$gateway_ip' unreachable"
+        timestamp "FAIL: Gateway IP '$gateway_ip' unreachable (skipping as some routers are configured to just not respond to ping)"
         return 1
     fi
 }
@@ -106,9 +121,13 @@ while :; do
 done
 
 timestamp "Checking Gateway IP available: $gateway_ip"
-while ! check_gateway; do
-    sleep "$sleep_seconds"
-done
+#while ! check_gateway; do
+# no point wasting 5 tries when the hotel wifi will always fail, it just slows down dependent scripts
+#for ((i=0; i< 5; i++)); do
+#    check_gateway && break
+#    sleep "$sleep_seconds"
+#done
+check_gateway || :
 
 timestamp "Checking Public IP available: $public_ip"
 while ! check_public_ip; do

@@ -10,7 +10,8 @@
 #
 #  License: see accompanying Hari Sekhon LICENSE file
 #
-#  If you're using my code you're welcome to connect with me on LinkedIn and optionally send me feedback to help steer this or other code I publish
+#  If you're using my code you're welcome to connect with me on LinkedIn
+#  and optionally send me feedback to help steer this or other code I publish
 #
 #  https://www.linkedin.com/in/HariSekhon
 #
@@ -30,7 +31,7 @@ Searches the Spotify API and returns the first N tracks / artists / albums that 
 
 See this page for documentation on how to write query expressions:
 
-https://developer.spotify.com/documentation/web-api/reference/search/search/
+    https://developer.spotify.com/documentation/web-api/reference/search
 
 Example:
 
@@ -40,6 +41,11 @@ Example:
 
 API JSON is returned, used by adjacent spotify_search*.sh scripts
 
+There is no way in Spotify API to anchor search terms, they are always fuzzy and will therefore return things like
+remixes of a given song along with its original version
+
+Non-ASCII characters will cause the Spotify API to break with HTTP 400 errors - you must URL encode them first
+eg. the artist Sébastien Tellier. You can use the ../bin/urlencode.sh script on the term first
 
 Environment variable options:
 
@@ -47,7 +53,7 @@ Environment variable options:
                         artist
                         album
 
-\$SPOTIFY_SEARCH_LIMIT = 1 # default
+\$SPOTIFY_SEARCH_LIMIT = 1 # default, official API limit 10, this code truncates to max 50 to avoid API errors
 
 \$SPOTIFY_SEARCH_OFFSET = 0 # default
 

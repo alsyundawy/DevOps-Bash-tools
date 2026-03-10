@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #  vim:ts=4:sts=4:sw=4:et
+#  args: Sébastien Tellier
 #
 #  Author: Hari Sekhon
 #  Date: 2020-03-03 17:47:02 +0000 (Tue, 03 Mar 2020)
@@ -14,17 +15,42 @@
 #  https://www.linkedin.com/in/HariSekhon
 #
 
-# Quick command line URL encoding
-
 set -euo pipefail
 [ -n "${DEBUG:-}" ] && set -x
+srcdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# shellcheck disable=SC1090,SC1091
+. "$srcdir/lib/utils.sh"
+
+# shellcheck disable=SC2034,SC2154
+usage_description="
+URL encodes the given string argument or standard input
+
+Only escapes characters disallowed in URIs
+
+Figures out which of the relevant tools are available and uses the first one it finds in this order:
+
+- jq
+- Perl URI::ESCAPE
+- Python urllib.parse
+"
+
+# used by usage() in lib/utils.sh
+# shellcheck disable=SC2034
+usage_args="[<string_to_urlencode>]"
+
+help_usage "$@"
+
+#min_args 1 "$@"
 
 if [ $# -gt 0 ]; then
     echo "$@"
 else
     cat
 fi |
-if type -P perl &>/dev/null &&
+if type -P jq &>/dev/null; then
+    jq -rn --arg string "$(cat)" '$string|@uri'
+elif type -P perl &>/dev/null &&
    perl -MURI::ESCAPE -e '' &>/dev/null; then
     perl -MURI::Escape -ne 'chomp; print uri_escape($_) . "\n"'
 elif type -p python3 &>/dev/null &&

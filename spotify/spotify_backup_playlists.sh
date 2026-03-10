@@ -80,15 +80,15 @@ if [ -f "$playlist_file" ] &&
     file_newer_than_mins 5 "$playlist_file"; then
     timestamp "Spotify playlist file '$playlist_file' was updated < 5 minutes ago, using it for playlist name <=> ID lookups"
     while read -r playlist_id snapshot_id playlist_name; do
-        printf '%s  ' "$(date '+%F %T')"
         "$srcdir/spotify_backup_playlist.sh" "$playlist_name" "$playlist_id" "$snapshot_id" "$@"
     done < "$playlist_file"
 else
-    "$srcdir"/spotify_foreach_playlist.sh "printf '%s  ' \"\$(date '+%F %T')\"; \"$srcdir/spotify_backup_playlist.sh\" \"{playlist_name}\" '{playlist_id}' '{snapshot_id}'" "$spotify_user" "$@"
+    "$srcdir"/spotify_foreach_playlist.sh "
+        '$srcdir/spotify_backup_playlist.sh' \"{playlist_name}\" '{playlist_id}' '{snapshot_id}'
+    " "$spotify_user" "$@"
 fi
 if [ -n "${SPOTIFY_PRIVATE:-}" ] &&
    is_blank "${NO_LIKED_PLAYLIST:-}"; then
-    printf '%s  ' "$(date '+%F %T')"
     "$srcdir/spotify_backup_playlist.sh" liked "$@"
 fi
 echo >&2

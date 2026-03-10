@@ -36,7 +36,7 @@ You can set this args as an environment variable \$SHAZAM_APP_DUMP_NUM_TRACKS - 
 
 # used by usage() in lib/utils.sh
 # shellcheck disable=SC2034
-usage_args="[<num_tracks>]"
+usage_args="[<num_tracks> <sqlite_db_path>]"
 
 help_usage "$@"
 
@@ -44,36 +44,6 @@ max_args 1 "$@"
 
 mac_only
 
-arg="${1:-${SHAZAM_APP_DUMP_NUM_TRACKS:-1}}"
+export SHAZAM_APP_DELETE_TRACK_AFTER_SEARCH=1
 
-case "$arg" in
-    # allow only these args to be passed to shazam_app_dump_tracks.sh
-    today|yesterday|week|????-??-??) : ;;
-    *)
-        if ! [[ "$arg" =~ ^-?[[:digit:]]+$ ]]; then
-            die "Invalid argument given, must be an integer or one of today/yesterday/week/YYYY-MM-DD: $arg"
-        fi
-        ;;
-esac
-
-relaunch_shazam(){
-    timestamp "Relaunching Shazam app to reflect removed tracks"
-    "$srcdir/reopen_app.sh" Shazam
-    sleep 2
-    # hit Escape key to to minimize Shazam back to the menu bar
-    osascript -e "tell application \"System Events\" to key code 53"
-    untrap
-    exit
-}
-export -f relaunch_shazam
-
-trap_cmd 'relaunch_shazam'
-
-while IFS=$'\t' read -r artist _ track; do
-    "$srcdir/spotify_app_search.sh" "$artist $track"
-    timestamp "Press enter to delete this track from the Shazam DB: $artist - $track"
-    read -r < /dev/tty
-    QUIET=1 "$srcdir/shazam_app_delete_track.sh" "$artist" "$track"
-done < <(
-    "$srcdir/shazam_app_dump_tracks.sh" "$arg"
-)
+"$srcdir/shazam_search_spotify.sh" "$@"
