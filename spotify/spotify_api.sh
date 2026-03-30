@@ -24,11 +24,11 @@ srcdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # shellcheck disable=SC2034,SC2154
 usage_description="
-Queries the given Spotify API endpoint
+Queries the given Spotify API
 
 API endpoints you can query with this code:
 
-https://developer.spotify.com/documentation/web-api/reference/
+    https://developer.spotify.com/documentation/web-api/reference/
 
 Breaking Changes Feb 2026 - several API endpoints have been REMOVED :-(:
 
@@ -43,9 +43,9 @@ $usage_auth_help
 
 Examples:
 
-spotify_api.sh /v1/users/harisekhon
+    ${0##*/}.sh /v1/users/harisekhon
 
-SPOTIFY_PRIVATE=1 spotify_api.sh /v1/me/tracks
+    SPOTIFY_PRIVATE=1 ${0##*/} /v1/me/tracks
 
 Used by adjacent spotify_*.sh scripts for more serious usage
 
