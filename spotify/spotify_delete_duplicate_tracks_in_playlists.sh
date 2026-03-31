@@ -10,7 +10,8 @@
 #
 #  License: see accompanying Hari Sekhon LICENSE file
 #
-#  If you're using my code you're welcome to connect with me on LinkedIn and optionally send me feedback to help steer this or other code I publish
+#  If you're using my code you're welcome to connect with me on LinkedIn
+#  and optionally send me feedback to help steer this or other code I publish
 #
 #  https://www.linkedin.com/in/HariSekhon
 #
@@ -24,9 +25,21 @@ srcdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # shellcheck disable=SC2034,SC2154
 usage_description="
-Deletes duplicate Spotify tracks in a given playlist (by Artist - Track name match, may be from different albums / singles and not 100% identical performances)
+Deletes duplicate Spotify tracks in a given playlist
 
-Playlist must be specified as the first argument and can be either a Spotify playlist ID or a full playlist name (see spotify_playlists.sh)
+Does this by Artist - Track name match
+
+Such tracks may be from different albums / singles and not 100% identical performances in practice,
+but is usually the same song
+
+Playlist must be specified as the first argument and can be either a Spotify playlist ID, link or full playlist name
+(see spotify_playlists.sh)
+
+You can first see which tracks would be deleted by running spotify_duplicate_tracks_in_playlist.sh
+which this script calls to find them:
+
+    spotify_duplicate_tracks_in_playlist.sh <playlist>
+
 
 $usage_playlist_help
 
@@ -49,10 +62,15 @@ export SPOTIFY_PRIVATE=1
 
 spotify_token
 
-# this script returns the ID if it's already in the correct format, otherwise queries and returns the playlist ID for the playlist
+# this script returns the ID if it's already in the correct format, otherwise queries
+# and returns the playlist ID for the playlist
 playlist_id="$(SPOTIFY_PLAYLIST_EXACT_MATCH=1 "$srcdir/spotify_playlist_name_to_id.sh" "$playlist")"
 
 export SPOTIFY_DUPLICATE_TRACK_POSITIONS=1
+
+if [[ "$playlist" =~ https://open.spotify.com/playlist/ ]]; then
+    playlist="$("$srcdir/spotify_playlist_id_to_name.sh" "$playlist_id")"
+fi
 
 timestamp "Finding and deleting duplicate tracks in playlist \"$playlist\" by exact \"Artist - Track\" name match:"
 duplicates="$("$srcdir/spotify_duplicate_tracks_in_playlist.sh" "$playlist_id")"
