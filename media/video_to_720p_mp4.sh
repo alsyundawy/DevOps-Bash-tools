@@ -32,6 +32,8 @@ instead of 720p and adjust the naming accordingly
 
 Names the generated files the same except with the file extension replaced with '.720p.mp4'
 
+Opens the video upon completion to check it unless environment variable NO_VIDEO_OPEN is set to any value
+
 Skips files which already have a corresponding adjacent '.720.mp4' file for safety
 
 Will fail if given a video that is already below that resolution
@@ -88,7 +90,9 @@ for filepath in "$@"; do
                     -- "$new_mp4_filepath"
         echo >&2
     fi
-    "$srcdir/vidopen.sh" "$new_mp4_filepath"
+    if [ -n "${NO_VIDEO_OPEN:-}" ]; then
+        "$srcdir/vidopen.sh" "$new_mp4_filepath"
+    fi
 done
 
 echo >&2
