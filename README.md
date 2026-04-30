@@ -423,6 +423,7 @@ Mac automation scripts to automate the Mac UI and settings
 - `reopen_app.sh` - relaunch a given app
   (used to reload Shazam to detect DB changes after removing tracks programmatically from its DB)
 - `spotify_app_search.sh` - runs a search in the Spotify App on Mac using Applescript
+- `spotify_app_search_filelist.sh` - searches the Spotify App for each track in a file, prompting to continue to the next track
 - `shazam_app_dump_tracks.sh` - dumps `artist - track` one per line from the Shazam local sqlite DB
 - `shazam_app_delete_track.sh` - deletes a given `"artist" "track"` from the Shazam local sqlite DB
 - `shazam_search_spotify_then_delete_track.sh` - searches for each Shazam'd track in the local Spotify desktop app,
@@ -1589,6 +1590,7 @@ See also [Knowledge Base notes for MultiMedia](https://github.com/HariSekhon/Kno
 - `spotify_rename_playlist.sh` - renames a Spotify playlist
 - `spotify_set_playlists_public.sh` / `spotify_set_playlists_private.sh` - sets one or more given Spotify playlists to public / private
 - `spotify_add_to_playlist.sh` - adds tracks to a given playlist. Takes a playlist name or ID and Spotify URIs in any form from files or standard input. Can be combined with many other tools listed here which output Spotify URIs, or appended from other playlists. Can also be used to restore a spotify playlist from backups
+- `spotify_add_filelist_to_playlist.sh` - searches the Spotify API for each track in a given file and adds the first matching track to the given playlist
 - `spotify_delete_from_playlist.sh` - deletes tracks from a given playlist. Takes a playlist name or ID and Spotify URIs in any form from files or standard input, optionally prefixed with a track position to remove only specific occurrences (useful for removing duplicates from playlists)
 - `spotify_delete_from_playlist_if_in_other_playlists.sh` - deletes tracks from a given playlist if their URIs are found in the subsequently given playlists
 - `spotify_delete_from_playlist_if_track_in_other_playlists.sh` - deletes tracks from a given playlist if their 'Artist - Track' name match are found in the subsequently given playlists (less accurate than exact URI deletion above)
