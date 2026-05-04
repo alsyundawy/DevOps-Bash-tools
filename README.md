@@ -318,6 +318,7 @@ Top-level `.bashrc` and `.bash.d/` directory:
 
 - `login.sh` - logs to major Cloud platforms if their credentials are found in the environment, CLIs such as AWS, GCP, Azure, GitHub... Docker registries: DockerHub, GHCR, ECR, GCR, GAR, ACR, Gitlab, Quay...
 - `clean_caches.sh` - cleans out OS package and programming language caches - useful to save space or reduce Docker image size
+- `command_return_to_current_window.sh` - runs a Mac or Linux command that opens a window and then switches back to the original foreground window
 - `crypto_dice_rolls.sh` - generates 100 random dice rolls to test a new crypto hardware wallet's fidelity (do not use this for your real crypto seed as your machine could be infected with malware which steals your seed phrase)
 - `delete_duplicate_files.sh` - deletes duplicate files with (N) suffixes, commonly caused by web browser downloads,
   in the given or current directory. Checks they're exact duplicates of a matching basename file without the (N) suffix with
@@ -344,11 +345,14 @@ Top-level `.bashrc` and `.bash.d/` directory:
 - `ldapsearch.sh` - shortens `ldapsearch` command by inferring switches from environment variables
 - `ldap_user_recurse.sh` / `ldap_group_recurse.sh` - recurse Active Directory LDAP users upwards to find all parent groups, or groups downwards to find all nested users (useful for debugging LDAP integration and group-based permissions)
 - `linux_distro_versions.sh` - quickly returns the list of major versions for a given Linux distro
+- `linux_command_return_to_current_window.sh` - runs a Linux command that opens a window and then switches back to the original foreground window
+- `mac_command_return_to_current_window.sh` - runs a Mac command that opens a window and then switches back to the original foreground window
 - `diff_line_threshold.sh` - compares two files vs a line count diff threshold to determine if they are radically different. Used to avoid overwriting files which are not mere updates but completely different files
 - `mv.sh` - moves directory trees resumably and removes the source files as they're copied over. Useful to migrate data from one disk to another, optionally with checksums. Uses rsync and shows the overall % of files transferred and the MB/s data transfer rate
 - `network_gateway.sh` - get the network gateway IP address on Linux or Mac
 - `network_randomize_mac_address.sh` - assigns a new random mac address to your network interface
 - `open.sh` - opens given arg, file or URL using whatever default system opener is available for Linux or Mac
+- `chrome.sh` - opens a URL in the Google Chrome browser in a portable way between Linux and Mac for use from other scripts. You may want to combine this with the `command_return_to_current_window.sh` script when automating opening tabs
 - `organize_downloads.sh` - moves files of well-known extensions in the `$HOME/Downloads` directory older than 1 week to capitalized subdirectories of their type to keep the `$HOME/Downloads/` directory tidy
 - `copy_to_clipboard.sh` - copies stdin or string arg to system clipboard on Linux or Mac
 - `paste_from_clipboard.sh` - pastes from system clipboard to stdout on Linux or Mac
@@ -396,6 +400,7 @@ Mac automation scripts to automate the Mac UI and settings
 - `mac_backup_du_in_progress.sh` - find large files in the currently in-progress Time Machine backup to find out what is taking so long and racking up so many more GB of changes than you expect. This helps discover large but unnecessary files that you might want to exclude using the adjacent script `mac_backup_exclude_paths.sh`
 - `mac_backup_exclude_paths.sh` - excludes many common large caches, docker and VM paths from macOS Time Machine backups
 - `mac_backup_find_excluded_paths.sh` - does a deep search for macOS Time Machine excluded backup paths on file/folder attributes. See [HariSekhon/Knowledge-Base Mac page](https://github.com/HariSekhon/Knowledge-Base/blob/main/mac.md#time-machine) for why
+- `mac_command_return_to_current_window.sh` - runs a Mac command that opens a window and then switches back to the original foreground window
 - `mac_rmdir.sh` - safely delete a directory on Mac only if it is empty of actual data, by first removing macOS hidden metadata files and dirs such as `.fseventsd/`, `.Spotlight-V100/` and `.DS_Store` - straight `rmdir` fails otherwise
 - `mac_iso_to_usb.sh` - converts a given ISO file to a USB bootable image and burns it onto a given or detected inserted USB drive
 - `mac_ramdisk.sh` - creates a mac ramdisk of given MB size. Useful for performance, or even testing disk write scripts such as `disk_speed_write_*.sh` without wearing out your SSD
@@ -1423,6 +1428,7 @@ See also [Knowledge Base notes for CI/CD](https://github.com/HariSekhon/Knowledg
   - `cloudflare_ssl_verified.sh` - gets the Cloudflare zone SSL verification status for a given zone
   - `cloudflare_ssl_verified_all_zones.sh` - same as above for all zones
   - `cloudflare_zones.sh` - lists Cloudflare zone names and IDs (needed for writing Terraform Cloudflare code)
+- `chrome.sh` - opens a URL in the Google Chrome browser in a portable way between Linux and Mac for use from other scripts. You may want to combine this with the `command_return_to_current_window.sh` script when automating opening tabs
 - `datadog_api.sh` - queries the [DataDog](https://www.datadoghq.com/) API with authentication
 - `dnsjson.sh` - queries dnsjson.com for DNS records
 - `domains_subdomains_environments.sh` - for a given list of domains, deduplicate and print dev / staging subdomains as well as root domain for prod. Used to generate a whole bunch of Ad Tech domains and pixel tracker subdomains for a project. Combine with `markdown_columns_to_table.sh` to generate the markdown documentation for your domains and subomains per project and environment
