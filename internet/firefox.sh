@@ -24,20 +24,22 @@ srcdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # shellcheck disable=SC2034,SC2154
 usage_description="
-Opens a URL in the Google Chrome browser in a portable way between Linux and Mac for use from other scripts
+Opens a URL in the Firefox browser in a portable way between Linux and Mac for use from other scripts
 
 If no URL is given then it defaults to Google.com
 
-Opens in most recent Chrome window
+Opens in most recent Firefox window
 
 Useful Switches:
 
 --new-window        Opens in a New Window
---incognito         Incognito mode, useful for testing problems with websites without using the cookies cache
+--devtools          Opens with Dev Tools running
+--private-window    Private mode, useful for testing problems with websites without using the cookies cache
 
-This site is useful to see more Chrome switches:
+Another thing you can do on Mac is to add /Applications/Firefox.app/Contents/MacOS/ to your \$PATH and
+just call the firefox command as its the same on both platforms unlike with Chrome
 
-    https://peter.sh/experiments/chromium-command-line-switches/
+This script maintains parity with the adjacent chrome.sh script
 "
 
 # used by usage() in lib/utils.sh
@@ -53,15 +55,15 @@ help_usage "$@"
 
 #if is_mac; then
     # don't use open because it requires figuring out what is the URL (or prefixing it with http(s):// )
-    # and what are the --args to pass to Chrome
-    #open -a 'Google Chrome' -u "$url" --args "$@"
-    # just call Chrome directly by path for simpler native chrome arg handling to be uniform across platforms
+    # and what are the --args to pass to Firefox
+    #open -a 'Firefox' -u "$url" --args "$@"
+    # just call Firefox directly by path for simpler native firefox arg handling to be uniform across platforms
 if is_mac &&
-    [ -x "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" ]; then
-    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" "$@" &
+    [ -x "/Applications/Firefox.app/Contents/MacOS/firefox" ]; then
+    "/Applications/Firefox.app/Contents/MacOS/firefox" "$@" &
 else
-    if ! type -P google-chrome &>/dev/null; then
-        die "ERROR: google-chrome not found in \$PATH"
+    if ! type -P firefox &>/dev/null; then
+        die "ERROR: firefox not found in \$PATH"
     fi
-    google-chrome "$@" &
+    firefox "$@" &
 fi

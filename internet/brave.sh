@@ -24,18 +24,18 @@ srcdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # shellcheck disable=SC2034,SC2154
 usage_description="
-Opens a URL in the Google Chrome browser in a portable way between Linux and Mac for use from other scripts
+Opens a URL in the Brave browser in a portable way between Linux and Mac for use from other scripts
 
 If no URL is given then it defaults to Google.com
 
-Opens in most recent Chrome window
+Opens in most recent Brave window
 
 Useful Switches:
 
 --new-window        Opens in a New Window
 --incognito         Incognito mode, useful for testing problems with websites without using the cookies cache
 
-This site is useful to see more Chrome switches:
+This site is useful to see more Brave switches which are based on Chromium:
 
     https://peter.sh/experiments/chromium-command-line-switches/
 "
@@ -53,15 +53,18 @@ help_usage "$@"
 
 #if is_mac; then
     # don't use open because it requires figuring out what is the URL (or prefixing it with http(s):// )
-    # and what are the --args to pass to Chrome
-    #open -a 'Google Chrome' -u "$url" --args "$@"
-    # just call Chrome directly by path for simpler native chrome arg handling to be uniform across platforms
+    # and what are the --args to pass to Brave
+    #open -a 'Brave Browser' -u "$url" --args "$@"
+    # just call Brave directly by path for simpler native chrome arg handling to be uniform across platforms
 if is_mac &&
-    [ -x "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" ]; then
-    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" "$@" &
+    [ -x "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser" ]; then
+    "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser" "$@" &
 else
-    if ! type -P google-chrome &>/dev/null; then
-        die "ERROR: google-chrome not found in \$PATH"
+    if type -P brave-browser &>/dev/null; then
+        brave-browser "$@" &
+    elif type -P brave &>/dev/null; then
+        brave "$@" &
+    else
+        die "ERROR: 'brave-browser' or 'brave' not found in \$PATH"
     fi
-    google-chrome "$@" &
 fi
