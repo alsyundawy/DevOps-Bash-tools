@@ -124,7 +124,7 @@ dle(){
     if [[ "$PWD" =~ $HOME(/Downloads(/Transmission)?)?$ ]]; then
         echo "Switching to $HOME/Downloads/YouTube"
         mkdir -p -v ~/Downloads/YouTube
-        cd ~/Downloads/YouTube || return 1
+        pushd ~/Downloads/YouTube || return 1
         if [ -f .envrc ]; then
             eval "$(direnv export bash)"
         fi
@@ -141,6 +141,20 @@ dle(){
         sleep "$sleep_secs"
     done
     exit
+}
+dlq(){
+    youtube_download_queue_add.sh "$@"
+}
+dlp(){
+    if [[ "$PWD" =~ $HOME(/Downloads(/Transmission)?)?$ ]]; then
+        echo "Switching to $HOME/Downloads/YouTube"
+        mkdir -p -v ~/Downloads/YouTube
+        pushd ~/Downloads/YouTube || return 1
+        if [ -f .envrc ]; then
+            eval "$(direnv export bash)"
+        fi
+    fi
+    youtube_download_queue_process.sh
 }
 alias ytp="cd ~/Downloads/YouTube && ./play.sh"
 
@@ -217,7 +231,7 @@ findup(){
 
 cdup(){
     local arg="$1"
-    cd "$(findup "$arg")"
+    cd "$(findup "$arg")" || return 1
 }
 
 lld(){

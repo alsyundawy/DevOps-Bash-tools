@@ -906,6 +906,11 @@ See also [Knowledge Base notes for Docker](https://github.com/HariSekhon/Knowled
 - `ini_config_duplicate_sections.sh` - lists duplicate INI config sections that are using the same value for a given key in the given .ini file
 - `ini_config_duplicate_section_names.sh` - lists duplicate INI config section names that are using the same value for a given key in the given .ini file
 - `ini_grep_section.sh` - prints the named section from a given .ini file to stdout
+- `queue_*.sh` - simple fast atomic durable local files based queuing using safe independent filesystem semantics:
+  - `queue_add.sh` - creates an atomic queue file at the given location with the given data
+  - `queue_process.sh` - returns the next queued item after atomically moving it to processing state
+  - `queue_requeue.sh` - requeues the given item for reprocessing at the back of the queue so calling scripts don't get blocked retrying faulty queue items
+  - `queue_recover.sh` - scans for stale queue processing items more than N minutes old and requeues them for reprocessing (for cases where a queue reader script has died without completion)
 - `wordcount.sh` - counts and ranks words by their frequency in file(s) or stdin
 - Data format validation `validate_*.py` from [DevOps Python Tools repo](https://github.com/HariSekhon/DevOps-Python-tools):
 
@@ -1571,6 +1576,8 @@ Each of these three scripts creates an animated Git from running terminal comman
   - `twitter_download_video.sh` - same as above for Twitter / X
   - `x_download_video.sh` - same as above for X / Twitter
 - `youtube_download_channel.sh` - downloads all videos from a given YouTube channel using yt-dlp
+- `youtube_download_queue_add.sh` - add YouTube or other supported social media URLs for the related adjacent scripts to a durable local queue for parallel recoverable download processing, thereby avoiding throttling errors from too many parallel instant downloads
+- `youtube_download_queue_process.sh` - takes the next item from the download queue and calls `youtube_download_video.sh` on it
 - `video_to_720p_mp4` - converts one or more video files to 720p mp4 format using ffmpeg. Useful to make good trade-off of quality vs size for social media sharing
 - `video_to_480p_mp4` - symlink to above script converts to 480p mp4 format
 - `vidopen.sh` - opens the given video file using whatever available tool is found on Linux or Mac
