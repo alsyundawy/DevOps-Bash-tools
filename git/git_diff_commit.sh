@@ -110,8 +110,10 @@ git_diff_commit(){
         while read -r changed_filename; do
             is_blank "$changed_filename" && continue
             basename="${changed_filename##*/}"
-            diff="$(git diff --color=always -- "$changed_filename"
-                    git diff --cached --color=always -- "$changed_filename")"
+            diff="$(
+                git diff --color=always -- "$changed_filename"
+                git diff --color=always --cached -- "$changed_filename"
+            )"
             if [ -z "$diff" ]; then
                 continue
             fi
