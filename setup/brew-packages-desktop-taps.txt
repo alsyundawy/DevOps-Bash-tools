@@ -16,7 +16,7 @@ coder/coder             coder
 
 ariga/tap               atlas
 
-Checkmarx/tap           kics
+#Checkmarx/tap           kics
 
 FairwindsOps/tap        polaris
 FairwindsOps/tap        pluto

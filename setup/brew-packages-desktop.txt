@@ -141,6 +141,7 @@ graphviz  # for the 'dot' command (use with terraform graph), and also github.co
 gron  # flattens JSON to be greppable
 #groovy  # see near end
 #groovysdk  # see near end
+gtop
 hadolint
 haproxy
 helm
