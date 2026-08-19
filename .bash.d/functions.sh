@@ -442,6 +442,19 @@ f(){
     eval find -L . -type f "$grep"
 }
 
+fll(){
+    local grep=""
+    # shellcheck disable=SC2013
+    for x in "${@//[^A-Za-z0-9_-]/.}"; do
+        if [[ "$x" =~ [a-zA-Z0-9._-] ]]; then
+            grep="$grep | grep -i --color=auto $x"
+        fi
+    done
+    # times about the same
+    #eval find -L . -type f -iname "\*$1\*" $grep
+    eval find -L . -type f -exec ls -lh {} \\\; "$grep"
+}
+
 dgrep(){
     local pattern="$*"
     # auto-exported in aliases.sh when iterating git repos

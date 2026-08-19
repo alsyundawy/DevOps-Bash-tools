@@ -71,6 +71,8 @@ check_bin ffmpeg
 
 SECONDS=0
 
+FFMPEG_LOGLEVEL="${FFMPEG_LOGLEVEL:-info}"
+
 format=720
 scale="-1:$format"
 if [ -n "${FORMAT_480:-}" ]; then
@@ -89,6 +91,7 @@ for filepath in "$@"; do
         trap_cmd 'echo; echo "removing partially done file:"; rm -fv -- "$new_mp4_filepath"; untrap'
         timestamp "converting $filepath => $new_mp4_filepath"
         time ffmpeg -i "$filepath" \
+                    -loglevel "$FFMPEG_LOGLEVEL" \
                     -vf "scale=$scale" \
                     -c:v libx264 \
                     -crf 23 \
