@@ -40,6 +40,10 @@ Tests:
 - DNS resolution is working (resolves google.com)
 - Public Domain is reachable (ping to google.com)
 - Google.com and GitHub.com websites are available over HTTPS
+- China mode - detects if your public IP is in China and if so switches to Chinese accessible site baidu.com
+  instead of google.com for DNS and IP tests since Google is blocked in China by The Great Firewall
+  (if you're on a VPN in China your public IP will probably be in a different country and it'll use the default
+  tests which will work over your VPN)
 "
 
 # used by usage() in lib/utils.sh
@@ -52,8 +56,22 @@ no_more_args "$@"
 
 SECONDS=0
 
-public_ip="1.1.1.1"
-domain="google.com"
+# XXX: catch 22 - I need to detect if public IP is in China to be able to switch tests to Chinese accessible sites
+#      call this after gateway test at least
+configure_sites_to_test(){
+    # China detection is best effort and ignore if it fails and just stick with the defaults
+    country="$(curl -sS ifconfig.co/json | jq -r '.country' || :)"
+
+    if [ "$country" = "China" ]; then
+        domain="baidu.com"
+        public_ip="111.63.65.103"
+        websites="baidu.com github.com"
+    else
+        domain="google.com"
+        public_ip="1.1.1.1"
+        websites="google.com github.com"
+    fi
+}
 
 ping_count=1
 ping_timeout=2
@@ -92,6 +110,8 @@ check_dns() {
         getent hosts "$domain" &>/dev/null
     elif type -P dig &>/dev/null; then
         dig +short "$domain" &>/dev/null
+    elif type -P host &>/dev/null; then
+        host "$domain" &>/dev/null
     elif type -P nslookup &>/dev/null; then
         nslookup "$domain" &>/dev/null
     else
@@ -140,6 +160,8 @@ timestamp "Checking Gateway IP available: $gateway_ip"
 #done
 check_gateway || :
 
+configure_sites_to_test
+
 timestamp "Checking Public IP available: $public_ip"
 while ! check_public_ip; do
     sleep "$sleep_seconds"
@@ -155,7 +177,7 @@ while ! check_domain_ping; do
     sleep "$sleep_seconds"
 done
 
-for website in google.com github.com; do
+for website in $websites; do
     timestamp "Checking HTTPS reachable: $website"
     while ! check_https "$website"; do
         sleep "$sleep_seconds"
