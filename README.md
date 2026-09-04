@@ -1681,31 +1681,39 @@ See also [Knowledge Base notes for MultiMedia](https://github.com/HariSekhon/Kno
 
 - `lint.sh` - lints one or more files, auto-determines the file types, parses lint headers and calls appropriate scripts and tools. Integrated with my custom `.vimrc`
 - `run.sh` - runs one or more files, auto-determines the file types, any run or arg headers and executes each file using the appropriate script or CLI tool. Integrated with my custom `.vimrc`
-- `check_*.sh` - extensive collection of generalized tests - these run against all my GitHub repos via [CI](https://harisekhon.github.io/CI-CD/). Some examples:
-
+- `check_*.sh` - extensive collection of 60+ generalized tests
+  - run against all my GitHub repos via [CI](https://harisekhon.github.io/CI-CD/)
+  - `check_internet.sh` - useful, waits for internet connectivity before proceeding, multiple levels of checks on gateway, DNS, public IP and public domains
+    - I use in my [HariSekhon/Spotify-Playlists](https://github.com/HariSekhon/Spotify-Playlists) API downloads
   - Programming language linting:
-
     - [Python](https://www.python.org/) (syntax, pep8, byte-compiling, reliance on asserts which can be disabled at runtime, except/pass etc.)
     - [Perl](https://www.perl.org/)
     - [Java](https://www.java.com/en/)
     - [Scala](https://www.scala-lang.org/)
     - [Ruby](https://www.ruby-lang.org/en/)
     - [Bash](https://www.gnu.org/software/bash/) / Shell
-    - Misc (whitespace, custom code checks etc.)
-
-  - Build System, Docker & CI linting:
-
+    - Misc (whitespace, README, custom code checks etc.)
+  - Data & Markup:
+    - [JSON](https://www.json.org/json-en.html)
+    - [CSON](https://github.com/lifthrasiir/cson)
+    - [XML](https://www.w3.org/XML/)
+    - [YAML](https://yaml.org/)
+  - Build Systems:
     - [Make](https://www.gnu.org/software/make/)
     - [Maven](https://maven.apache.org/)
     - [SBT](https://www.scala-sbt.org/)
     - [Gradle](https://gradle.org/)
-    - [Travis CI](https://travis-ci.org/)
-    - [Circle CI](https://circleci.com/)
+  - CI linting:
+    - [Jenkinsfiles](https://www.jenkins.io/doc/book/pipeline/jenkinsfile/)
     - [GitLab CI](https://docs.gitlab.com/ee/ci/)
-    - [Concourse CI](https://concourse-ci.org/)
-    - [Codefresh CI](https://codefresh.io/)
+    - [Circle CI](https://circleci.com/)
+    - [Travis CI](https://travis-ci.org/)
+    - [Concourse](https://concourse-ci.org/)
+    - [Codefresh](https://codefresh.io/)
+  - Containerization & Virtualization:
     - [Dockerfiles](https://docs.docker.com/engine/reference/builder/)
     - [Docker Compose](https://docs.docker.com/compose/)
+    - [Kubernetes](https://kubernetes.io/) yaml & [Kustomization](https://kustomize.io/)
     - [Vagrantfiles](https://www.vagrantup.com/docs/vagrantfile)
 
 ## Individual Setup Parts

@@ -66,6 +66,8 @@ resolve_symlinks(){
 # because those looks consume the /dev/stdin
 exec 3<&0
 
+no_changes="true"
+
 git_diff_commit(){
     local basedir
     for filename in "${@:-.}"; do
@@ -85,6 +87,7 @@ git_diff_commit(){
         )"
         while read -r added_filename; do
             is_blank "$added_filename" && continue
+            no_changes="false"
             basename="${added_filename##*/}"
             git add "$basename"
             diff="$(git diff --color=always -- "$added_filename"
@@ -109,6 +112,7 @@ git_diff_commit(){
         )"
         while read -r changed_filename; do
             is_blank "$changed_filename" && continue
+            no_changes="false"
             basename="${changed_filename##*/}"
             diff="$(
                 git diff --color=always -- "$changed_filename"
@@ -138,4 +142,7 @@ for target in "${@:-.}"; do
     git_diff_commit "$target"
 done
 
+if [ "$no_changes" = "true" ]; then
+    timestamp "No Changes"
+fi
 timestamp "Git Diff Commit completed"
