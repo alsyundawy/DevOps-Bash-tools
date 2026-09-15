@@ -39,9 +39,13 @@ Tests:
 - Public IP is reachable (ping to known major public IP 1.1.1.1)
 - DNS resolution is working (resolves google.com)
 - Public Domain is reachable (ping to google.com)
-- Google.com and GitHub.com websites are available over HTTPS
+- Google.com or Baidu.com (if you're running this inside China since Google is blocked there) over HTTPS
+- Important Websites available over HTTPS - defaults to GitHub.com but you can override this to others using
+  environment variable \$CHECK_INTERNET_IMPORTANT_WEBSITES. In China github.com was often extraordinarily slow to
+  respond, probably due to The Great Firewall inspection, so I overrode this for my Spotify-Playlists repo
+  to just check api.spotify.com
 - China mode - detects if your public IP is in China and if so switches to Chinese accessible site baidu.com
-  instead of google.com for DNS and IP tests since Google is blocked in China by The Great Firewall
+  instead of google.com for DNS, IP and HTTPS tests since Google is blocked in China by The Great Firewall
   (if you're on a VPN in China your public IP will probably be in a different country and it'll use the default
   tests which will work over your VPN)
 "
@@ -56,20 +60,33 @@ no_more_args "$@"
 
 SECONDS=0
 
+# Sometimes Github.com works and sometimes it doesn't - Great Firewall interference?
+# I cannot replace this with another site as this is one of the primary reasons to check internet availability
+# before doing git pushes
+important_websites="${CHECK_INTERNET_IMPORTANT_WEBSITES:-github.com}"
+
 # XXX: catch 22 - I need to detect if public IP is in China to be able to switch tests to Chinese accessible sites
 #      call this after gateway test at least
 configure_sites_to_test(){
+    if [ -n "${country:-}" ]; then
+        # if we're already successfully determined the country and configured relevant sites, skip this
+        # this allows repeated calling at each stage to recover in case on stage fails to detect which
+        # could result in a stuck loop from race condition when calling this inside China
+        return
+    fi
     # China detection is best effort and ignore if it fails and just stick with the defaults
-    country="$(curl -sS ifconfig.co/json | jq -r '.country' || :)"
+    country="$(curl -sS https://ifconfig.co/json | jq -r '.country' || :)"
 
     if [ "$country" = "China" ]; then
+        timestamp "Configuring Site Tests: for China"
         domain="baidu.com"
         public_ip="111.63.65.103"
-        websites="baidu.com github.com"
+        websites="baidu.com $important_websites"
     else
+        timestamp "Configuring Site Tests: Default"
         domain="google.com"
         public_ip="1.1.1.1"
-        websites="google.com github.com"
+        websites="google.com $important_websites"
     fi
 }
 
@@ -97,6 +114,7 @@ check_gateway() {
 }
 
 check_public_ip() {
+    configure_sites_to_test
     if ping -c "$ping_count" -W "$ping_timeout" "$public_ip" &>/dev/null; then
         timestamp "OK: Public IP reachable"
     else
@@ -106,6 +124,7 @@ check_public_ip() {
 }
 
 check_dns() {
+    configure_sites_to_test
     if type -P getent &>/dev/null; then
         getent hosts "$domain" &>/dev/null
     elif type -P dig &>/dev/null; then
@@ -122,6 +141,7 @@ check_dns() {
 }
 
 check_domain_ping() {
+    configure_sites_to_test
     if ping -c "$ping_count" -W "$ping_timeout" "$domain" &>/dev/null; then
         timestamp "OK: Domain IP reachable"
     else
@@ -131,6 +151,7 @@ check_domain_ping() {
 }
 
 check_https(){
+    configure_sites_to_test
     local website="$1"
     if curl -sS --fail "https://$website" &>/dev/null; then
         timestamp "OK: $website HTTPS reachable"
